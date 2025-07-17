@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:myresolve/Screens/Authentication/Register.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:sizer/sizer.dart';
 
@@ -190,6 +191,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           GestureDetector(
                             onTap: () {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const RegisterScreen(),
+                                ),
+                              );
                               // Sign Up logic here
                             },
                             child: Text(

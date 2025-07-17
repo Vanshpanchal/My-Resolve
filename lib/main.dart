@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:myresolve/Screens/Authentication/Register.dart';
+import 'package:myresolve/Utils/Colors.dart';
 import 'package:sizer/sizer.dart';
 
 import 'Screens/Authentication/Login.dart';
@@ -17,10 +19,18 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'My Resolve',
           theme: ThemeData(
-            primarySwatch: Colors.blue,
+            textSelectionTheme: const TextSelectionThemeData(
+              cursorColor: AppColors.mainColor,
+            ),
+            primarySwatch: AppColors.mainColor,
             fontFamily: 'Inter',
           ),
-          home: const LoginScreen(),
+          initialRoute: '/login',
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/register': (context) => const RegisterScreen(),
+            // Add other routes as needed
+          },
         );
       },
     );
