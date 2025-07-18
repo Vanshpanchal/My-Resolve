@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
+import 'package:myresolve/Screens/Main/HomeScreen.dart';
+import 'package:myresolve/Screens/Main/Profile.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:sizer/sizer.dart';
 
 import 'Screens/Authentication/Login.dart';
 void main() {
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
   runApp(const MyApp());
 }
 
@@ -25,11 +29,11 @@ class MyApp extends StatelessWidget {
             primarySwatch: AppColors.mainColor,
             fontFamily: 'Inter',
           ),
-          initialRoute: '/login',
+          initialRoute: '/main', // Set the initial route
           routes: {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
-            // Add other routes as needed
+            '/main': (context) => const HomeScreen()            // Add other routes as needed
           },
         );
       },

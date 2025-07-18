@@ -8,6 +8,7 @@ class AppColors {
   static const Color information = Color(0xFF4D81E7);
   static const Color background = Color(0xFFF5F5F5);
   static const int _lightBluePrimaryValue = 0xFF1D61E7;
+  static const Color lightBlue = Color(0xFF346AD4);
 
   static const MaterialColor mainColor = MaterialColor(_lightBluePrimaryValue, <int, Color>{
     50: Color(0xFFE1F5FE),
