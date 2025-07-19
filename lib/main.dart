@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
             primarySwatch: AppColors.mainColor,
             fontFamily: 'Inter',
           ),
-          initialRoute: '/main', // Set the initial route
+          initialRoute: '/register', // Set the initial route
           routes: {
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),

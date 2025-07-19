@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
+import 'package:myresolve/Screens/Main/HomeScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:sizer/sizer.dart';
 
@@ -173,6 +174,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: gradientButton(
                           context,
                           onPressed: () {
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HomeScreen(),
+                              ),
+                            );
                             // Login logic here
                           },
                           text: "Login",
