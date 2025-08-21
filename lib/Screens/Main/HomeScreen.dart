@@ -1,6 +1,8 @@
 import 'package:awesome_bottom_bar/awesome_bottom_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:myresolve/Screens/Main/Dashboard.dart';
 import 'package:myresolve/Screens/Main/Profile.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:sizer/sizer.dart';
@@ -24,11 +26,9 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   final List<Widget> screens = [
+    DashboardScreen(),
     Center(
       child: Text('Home', style: TextStyle(fontSize: 18.sp)),
-    ),
-    Center(
-      child: Text('Book', style: TextStyle(fontSize: 18.sp)),
     ),
     Center(
       child: Text('Add', style: TextStyle(fontSize: 18.sp)),
@@ -41,32 +41,38 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Set status bar color to green and icons to light
+    // SystemChrome.setSystemUIOverlayStyle(
+    //   const SystemUiOverlayStyle(
+    //     statusBarColor: Colors.blue,
+    //     statusBarIconBrightness: Brightness.dark,
+    //     // For Android 15 edge-to-edge, you may want to also set:
+    //     systemNavigationBarColor: Colors.white,
+    //     systemNavigationBarIconBrightness: Brightness.dark,
+    //   ),
+    // );
+
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
-          backgroundColor: Colors.grey.shade100,
-          body: SafeArea(child: screens[_selected]),
+          backgroundColor: const Color(0xFFF5F8FB),
+
+          body: SafeArea(
+            child: screens[_selected],
+          ),
           bottomNavigationBar: BottomBarCreative(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
             items: items,
             backgroundColor: Colors.white,
-            // borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-            // blurRadius: 8,
-            // curve: Curves.easeInOut,
-            // animated: true,
             indexSelected: _selected,
-            // elevation: 8,
             iconSize: 28,
-            // tabStyle: TabStyle.creative, // <-- Creative type!
             color: Colors.grey.shade400,
-            // selectedColor: Colors.blue.shade600,
+            colorSelected: AppColors.lightBlue,
             onTap: (index) {
               setState(() {
                 _selected = index;
               });
             },
-
-            colorSelected: AppColors.lightBlue,
           ),
         );
       },

@@ -1,0 +1,1 @@
+enum PactStatus { active, completed, wasted }

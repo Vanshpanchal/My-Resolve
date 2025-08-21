@@ -1,10 +1,11 @@
-// import 'dart:ffi';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:myresolve/Screens/Main/Dashboard.dart';
+import 'package:myresolve/Screens/Main/Setting.dart';
 import 'package:myresolve/Utils/Colors.dart';
+import 'package:myresolve/Utils/PactStatusEnum.dart';
 import 'package:sizer/sizer.dart';
-// ... Your other imports
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,8 +17,25 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int selectedTabIndex = 1; // 1 = ACTIVITY, 0 = ACHIEVEMENTS
 
+  void _onSettingsTap() {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    debugPrint('Settings icon tapped');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.green,
+      statusBarIconBrightness: Brightness.light,
+    ));
+  }
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.blue, // Your color
+      statusBarIconBrightness: Brightness.light, // Icon color: light or dark
+    ));
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
@@ -35,35 +53,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: EdgeInsets.symmetric(vertical: 8.h),
                         child: Column(
                           children: [
-                            // ... Profile image and name
-                            Container(
+                            // UPDATED AVATAR WITH SETTINGS ICON
+                            SizedBox(
                               width: 14.h,
                               height: 14.h,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 3,
-                                ),
-                              ),
-                              child: CircleAvatar(
-                                radius: 7.h,
-                                backgroundImage: const AssetImage(
-                                  'assets/images/profile.jpg',
-                                ),
-                                backgroundColor: Colors.transparent,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: 14.h,
+                                    height: 14.h,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 3,
+                                      ),
+                                    ),
+                                    child: CircleAvatar(
+                                      radius: 7.h,
+                                      backgroundImage: const AssetImage(
+                                        'assets/images/profile.jpg',
+                                      ),
+                                      backgroundColor: Colors.transparent,
+                                    ),
+                                  ),
+
+                                  // Settings icon positioned INSIDE the avatar (bottom-right)
+                                ],
                               ),
                             ),
                             SizedBox(height: 1.5.h),
-                            Text(
-                              'Virat Kohli',
-                              style: TextStyle(
-                                fontSize: 18.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Virat Kohli',
+                                  style: TextStyle(
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(width: 2.w),
+                                GestureDetector(
+                                  onTap: _onSettingsTap,
+                                  child: Container(
+                                    padding: EdgeInsets.all(0.5.h),
+                                    width: 3.5.h,
+                                    height: 3.5.h,
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFDEE7FF),
+                                      shape: BoxShape.rectangle,
+                                      borderRadius: BorderRadius.circular(1.h),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.15),
+                                          blurRadius: 0.8.h,
+                                          offset: Offset(0, 0.4.h),
+                                        ),
+                                      ],
+                                    ),
+                                    child: SvgPicture.asset(
+                                      'assets/icons/Frame.svg',
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+
                             SizedBox(height: 3.h),
-                            // Pass selectedTabIndex and onTap callback
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -81,7 +139,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ],
                         ),
                       ),
-                      // Switch content based on selectedTabIndex
                       selectedTabIndex == 0
                           ? _buildActivityTab()
                           : _buildAchievementsTab(),
@@ -96,12 +153,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Activity Tab - Show pact list
+  // ---------------- Existing methods below (unchanged) ----------------
+
   Widget _buildActivityTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PactCard(
+        const PactCardProfile(
           title: 'Fitness Pact',
           createdBy: 'Virat Kohli',
           createdDate: '18th July 2025',
@@ -110,7 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           completedDays: 70,
           totalDays: 100,
         ),
-        PactCard(
+        const PactCardProfile(
           title: 'No Social Media Pact',
           createdBy: 'Virat Kohli',
           createdDate: '18th July 2025',
@@ -119,7 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           completedDays: 100,
           totalDays: 100,
         ),
-        PactCard(
+        PactCardProfile(
           title: 'No Social Media Pact',
           createdBy: 'Virat Kohli',
           createdDate: '18th July 2025',
@@ -160,7 +218,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           padding: EdgeInsets.symmetric(horizontal: 3.w),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               _medalCard(
                 'Gold',
@@ -211,12 +268,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _certCard(
                   '10 pact\nCompleted',
                   'CERTIFIED',
-                  Color(0x33D0C6AA),
+                  const Color(0x33D0C6AA),
                   Colors.grey.shade300,
                   key: UniqueKey(),
                 ),
@@ -235,7 +291,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   key: UniqueKey(),
                 ),
               ],
-
             ),
           ),
         ),
@@ -334,14 +389,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _medalCard(
-    String name,
-    Color color,
-    String count,
-    Color TextBg,
-    String path, {
-    Key? key,
-  }) {
+  Widget _medalCard(String name,
+      Color color,
+      String count,
+      Color TextBg,
+      String path, {
+        Key? key,
+      }) {
     return Container(
       key: key,
       width: 25.w,
@@ -360,7 +414,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(height: 1.h),
           SvgPicture.asset(path, width: 2.h, height: 5.h),
@@ -394,13 +447,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _certCard(
-    String title,
-    String subtitle,
-    Color iconColor,
-    Color bgColor, {
-    Key? key,
-  }) {
+  Widget _certCard(String title,
+      String subtitle,
+      Color iconColor,
+      Color bgColor, {
+        Key? key,
+      }) {
     return Container(
       key: key,
       width: 35.w,
@@ -452,9 +504,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// (CustomSwitchTab, PactStatus, PactCard, PactStatusBadge, CircleProgressPainter remain unchanged below)
+
 class CustomSwitchTab extends StatefulWidget {
   final Function(int selectedIndex)? onTap;
-  final int initialIndex; // Add initialIndex to control which tab is selected
+  final int initialIndex;
 
   const CustomSwitchTab({super.key, this.onTap, this.initialIndex = 0});
 
@@ -482,10 +536,7 @@ class _CustomSwitchTabState extends State<CustomSwitchTab> {
         borderRadius: BorderRadius.circular(1.5.h),
       ),
       child: Row(
-        // Note: The order here (ACTIVITY then ACHIEVEMENTS) determines their visual position
-        // and corresponds to the index passed to _tabItem.
-        // ACTIVITY is index 0, ACHIEVEMENTS is index 1.
-        children: [_tabItem("ACHIEVEMENTS", 1),_tabItem("ACTIVITY", 0), ],
+        children: [_tabItem("ACHIEVEMENTS", 1), _tabItem("ACTIVITY", 0)],
       ),
     );
   }
@@ -495,12 +546,8 @@ class _CustomSwitchTabState extends State<CustomSwitchTab> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() {
-            selectedIndex = index;
-          });
-          if (widget.onTap != null) {
-            widget.onTap!(index); // Pass the selected index back to the parent
-          }
+          setState(() => selectedIndex = index);
+          widget.onTap?.call(index);
         },
         child: Container(
           decoration: BoxDecoration(
@@ -522,9 +569,10 @@ class _CustomSwitchTabState extends State<CustomSwitchTab> {
     );
   }
 }
-enum PactStatus { active, completed, wasted }
 
-class PactCard extends StatelessWidget {
+
+
+class PactCardProfile extends StatelessWidget {
   final String title;
   final String createdBy;
   final String createdDate;
@@ -533,7 +581,7 @@ class PactCard extends StatelessWidget {
   final int? completedDays;
   final int? totalDays;
 
-  const PactCard({
+  const PactCardProfile({
     Key? key,
     required this.title,
     required this.createdBy,
@@ -627,8 +675,18 @@ class PactStatusBadge extends StatelessWidget {
         return Colors.green;
       case PactStatus.wasted:
         return Colors.red;
-      default:
-        return Colors.grey;
+      case PactStatus.completed:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case PactStatus.wasted:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case PactStatus.wasted:
+        // TODO: Handle this case.
+        throw UnimplementedError();
+      case PactStatus.wasted:
+        // TODO: Handle this case.
+        throw UnimplementedError();
     }
   }
 
@@ -636,12 +694,12 @@ class PactStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     double badgeSize = 18.w;
     double progress = 0.0;
-
-    // Calculate progress if status is active
-    if (status == PactStatus.active && completedDays != null && totalDays != null && totalDays != 0) {
+    if (status == PactStatus.active &&
+        completedDays != null &&
+        totalDays != null &&
+        totalDays != 0) {
       progress = (completedDays! / totalDays!).clamp(0.0, 1.0);
     }
-    // For completed/wasted, always show full progress
     if (status == PactStatus.completed || status == PactStatus.wasted) {
       progress = 1.0;
     }
@@ -652,7 +710,6 @@ class PactStatusBadge extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Outer progress arc
           SizedBox(
             width: badgeSize,
             height: badgeSize,
@@ -664,7 +721,6 @@ class PactStatusBadge extends StatelessWidget {
               ),
             ),
           ),
-          // Main badge content
           Container(
             width: badgeSize - 4.w,
             height: badgeSize - 4.w,
@@ -680,7 +736,10 @@ class PactStatusBadge extends StatelessWidget {
               ],
             ),
             alignment: Alignment.center,
-            child: status == PactStatus.active && completedDays != null && totalDays != null
+            child:
+            status == PactStatus.active &&
+                completedDays != null &&
+                totalDays != null
                 ? Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -717,7 +776,7 @@ class PactStatusBadge extends StatelessWidget {
 }
 
 class CircleProgressPainter extends CustomPainter {
-  final double progress; // from 0.0 to 1.0
+  final double progress;
   final Color color;
   final double strokeWidth;
 
@@ -732,27 +791,23 @@ class CircleProgressPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width / 2) - strokeWidth / 2;
 
-    // Background arc (greyed)
     final bgPaint = Paint()
       ..color = AppColors.background
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
-
     canvas.drawCircle(center, radius, bgPaint);
 
-    // Progress arc
     final progressPaint = Paint()
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    double sweepAngle = 2 * 3.1415926535 * progress;
-
+    final sweepAngle = 2 * 3.1415926535 * progress;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
-      -3.1415926535 / 2, // Start at top
+      -3.1415926535 / 2,
       sweepAngle,
       false,
       progressPaint,

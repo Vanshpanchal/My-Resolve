@@ -1,0 +1,1 @@
+enum PactFilter { all, active, failed, completed }
