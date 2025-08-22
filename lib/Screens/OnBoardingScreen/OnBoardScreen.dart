@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
 import 'package:sizer/sizer.dart';
 
@@ -36,13 +37,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _nextPage() {
     if (_currentPage < _screens.length - 1) {
-      _controller.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.ease);
+      _controller.nextPage(
+          duration: const Duration(milliseconds: 400), curve: Curves.ease);
     } else {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const HomeScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
       );
     }
   }
@@ -50,83 +50,89 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _skip() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (context) => const HomeScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const HomeScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final isLast = _currentPage == _screens.length - 1;
+
+    // ✅ Transparent system bars for edge-to-edge
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      systemNavigationBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ));
+
     return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Background image
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/Splash.png',
-                fit: BoxFit.cover,
+      extendBodyBehindAppBar: true, // ✅ allows bg behind status/nav bar
+      body: Stack(
+        children: [
+          // Background image (fills screen edge-to-edge)
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/Splash.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Main content
+          Column(
+            children: [
+              Expanded(
+                child: PageView.builder(
+                  controller: _controller,
+                  itemCount: _screens.length,
+                  onPageChanged: (i) => setState(() => _currentPage = i),
+                  itemBuilder: (context, i) {
+                    return _OnboardingPage(data: _screens[i]);
+                  },
+                ),
               ),
-            ),
-            // Main content
-            Column(
-              children: [
-                Expanded(
-                  child: PageView.builder(
-                    controller: _controller,
-                    itemCount: _screens.length,
-                    onPageChanged: (i) => setState(() => _currentPage = i),
-                    itemBuilder: (context, i) {
-                      return _OnboardingPage(data: _screens[i]);
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: _skip,
-                        child: Text(
-                          isLast ? '' : 'Skip',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.normal,
-                          ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: _skip,
+                      child: Text(
+                        isLast ? '' : 'Skip',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
                         ),
                       ),
-                      _PageIndicator(
-                        currentIndex: _currentPage,
-                        count: _screens.length,
-                      ),
-                      InkWell(
-                        onTap: _nextPage,
-                        borderRadius: BorderRadius.circular(100),
-                        child: Container(
-                          width: 12.w,
-                          height: 12.w,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_ios_outlined,
-                            color: const Color(0xFF5B9BFF),
-                            size: 18.sp,
-                          ),
+                    ),
+                    _PageIndicator(
+                      currentIndex: _currentPage,
+                      count: _screens.length,
+                    ),
+                    InkWell(
+                      onTap: _nextPage,
+                      borderRadius: BorderRadius.circular(100),
+                      child: Container(
+                        width: 12.w,
+                        height: 12.w,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_ios_outlined,
+                          color: Color(0xFF5B9BFF),
+                          size: 18.sp,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -151,52 +157,47 @@ class _OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Column(
-          children: [
-            SizedBox(height: 8.h),
-            SizedBox(
-              height: 38.h,
-              child: Image.asset(
-                data.image,
-                fit: BoxFit.contain,
+    return Column(
+      children: [
+        SizedBox(height: 10.h), // ✅ manual top spacing instead of SafeArea
+        SizedBox(
+          height: 38.h,
+          child: Image.asset(
+            data.image,
+            fit: BoxFit.contain,
+          ),
+        ),
+        const Spacer(),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 6.w),
+          child: Column(
+            children: [
+              Text(
+                data.title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 24.sp,
+                  color: Colors.white,
+                  height: 1.2,
+                  letterSpacing: -1.2,
+                ),
               ),
-            ),
-            const Spacer(),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6.w),
-              child: Column(
-                children: [
-                  Text(
-                    data.title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 24.sp,
-                      color: Colors.white,
-                      height: 1.2,
-                      letterSpacing: -1.2,
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    data.description,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.normal,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
+              SizedBox(height: 2.h),
+              Text(
+                data.description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  color: Colors.white.withOpacity(0.9),
+                  height: 1.3,
+                ),
               ),
-            ),
-            const Spacer(flex: 2),
-          ],
-        );
-      },
+            ],
+          ),
+        ),
+        const Spacer(flex: 2),
+      ],
     );
   }
 }

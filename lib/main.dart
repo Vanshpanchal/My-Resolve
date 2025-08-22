@@ -10,12 +10,12 @@ import 'package:sizer/sizer.dart';
 import 'Screens/Authentication/Login.dart';
 
 void main() {
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.top]); // Shows only status bar
-  SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-    statusBarColor: Colors.green,
-    statusBarIconBrightness: Brightness.light,
-  ));
-  // SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: []);
+  // SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.top]); // Shows only status bar
+  // SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+  //   statusBarColor: Colors.green,
+  //   statusBarIconBrightness: Brightness.light,
+  // ));
+  // FlutterNativeSplash.remove();
   runApp(const MyApp());
 }
 
@@ -29,6 +29,7 @@ class MyApp extends StatelessWidget {
     return Sizer(
       builder: (context, orientation, deviceType) {
         return MaterialApp(
+
           debugShowCheckedModeBanner: false,
           title: 'My Resolve',
           theme: ThemeData(

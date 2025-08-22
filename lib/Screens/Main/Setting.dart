@@ -9,6 +9,21 @@ class SettingsScreen extends StatelessWidget {
     return Sizer(
       builder: (ctx, orientation, deviceType) {
         return Scaffold(
+          extendBodyBehindAppBar: true, // Lets body extend behind app bar
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            // backgroundColor:,
+            elevation: 0,
+            centerTitle: true,
+            title: Text(
+              "Settings",
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
           backgroundColor: const Color(0xFFF5F8FB),
           body: Stack(
             children: [
@@ -17,7 +32,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               Column(
                 children: [
-                  _Header(),
+                  SizedBox(height: MediaQuery.of(context).padding.top + 5.h),
                   Expanded(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(
@@ -153,12 +168,11 @@ class _SettingsButton extends StatelessWidget {
         onTap: onTap,
         splashColor: Colors.white24,
         child: Container(
-
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 Color(0xFF1D61E7),
-                Color(0xBD1D61E7),// Blue
+                Color(0xBD1D61E7), // Blue
                 // Color(0x1FFFFFFF), // Light Blue
               ],
               begin: Alignment.topCenter,
@@ -182,7 +196,7 @@ class _SettingsButton extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 13.sp,
+                    fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
