@@ -25,17 +25,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.green,
-      statusBarIconBrightness: Brightness.light,
-    ));
+
   }
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: Colors.blue, // Your color
-      statusBarIconBrightness: Brightness.light, // Icon color: light or dark
-    ));
+
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(

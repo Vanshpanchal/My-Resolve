@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
 
             fontFamily: 'Inter',
           ),
-          initialRoute: '/onboarding',
+          initialRoute: '/splash',
           // Set the initial route
           routes: {
             '/splash': (context) => const SplashScreen(),

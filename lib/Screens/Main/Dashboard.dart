@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:myresolve/Screens/Main/Dashboard.dart';
+import 'package:myresolve/Screens/Main/PactDetail.dart';
 import 'package:myresolve/Utils/FilterBar.dart';
 import 'package:myresolve/Utils/PactCardModel.dart';
 import 'package:myresolve/Utils/PactFilterEnum.dart';
@@ -112,13 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FB),
-      body: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: SystemUiOverlayStyle(
-          statusBarColor: Colors.green,
-          statusBarIconBrightness: Brightness.light,
-        ),
-
-        child: Stack(
+      body: Stack(
         children: [
           Positioned.fill(
             child: Image.asset('assets/images/Blur.png', fit: BoxFit.cover),
@@ -194,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-    ));
+    );
   }
 
   Widget _header() {
@@ -270,7 +265,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         borderRadius: BorderRadius.circular(5.w),
       ),
       child: SizedBox(
-        height: 15.h,
+        height: 16.h,
         child: Row(
           children: [
             Expanded(
@@ -379,42 +374,52 @@ class PactCardProfile extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Container(
-            margin: EdgeInsets.only(bottom: 2.w),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(3.w),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
-                  blurRadius: 2.w,
-                  spreadRadius: 0.5.w,
-                  offset: Offset(0, 1.5.w),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PactDetailScreen(), // Replace with actual detail screen
                 ),
-              ],
-            ),
-            padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 3.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16.5.sp,
+              );
+            },
+            child: Container(
+              margin: EdgeInsets.only(bottom: 2.w),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(3.w),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.07),
+                    blurRadius: 2.w,
+                    spreadRadius: 0.5.w,
+                    offset: Offset(0, 1.5.w),
                   ),
-                ),
-                SizedBox(height: 1.h),
-                Text(
-                  'Created by $createdBy',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 15.sp),
-                ),
-                Text(
-                  'At $createdDate',
-                  style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
-                ),
-              ],
+                ],
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 3.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.5.sp,
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+                  Text(
+                    'Created by $createdBy',
+                    style: TextStyle(color: Colors.grey[600], fontSize: 15.sp),
+                  ),
+                  Text(
+                    'At $createdDate',
+                    style: TextStyle(color: Colors.grey[500], fontSize: 14.sp),
+                  ),
+                ],
+              ),
             ),
           ),
           Positioned(

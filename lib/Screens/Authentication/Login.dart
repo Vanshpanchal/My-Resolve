@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
+import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:sizer/sizer.dart';
 
@@ -178,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const HomeScreen(),
+                                builder: (context) => const OnboardingScreen(),
                               ),
                             );
                             // Login logic here

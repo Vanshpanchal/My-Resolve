@@ -15,7 +15,7 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 15.h,
+      height: 16.h,
       padding: EdgeInsets.symmetric(vertical : 1.5.w, horizontal: 2.w),
       decoration: BoxDecoration(
 
@@ -40,7 +40,7 @@ class StatCard extends StatelessWidget {
           ),
 
           // Text overlay at bottom
-          SizedBox(height: 2.5,),
+          SizedBox(height: 1.w,),
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
