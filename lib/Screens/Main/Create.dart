@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:myresolve/Screens/Main/CreatePact.dart';
+import 'package:flutter/services.dart';
+import 'package:myresolve/Utils/pact_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 class CreateScreen extends StatelessWidget {
@@ -22,7 +27,6 @@ class CreateScreen extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-
       ),
       body: Stack(
         children: [
@@ -30,28 +34,31 @@ class CreateScreen extends StatelessWidget {
             child: Image.asset('assets/images/Blur.png', fit: BoxFit.cover),
           ),
           SafeArea(
-            child: Column(
-              children: [
-                SizedBox(height: 5.h),
-                _ActionCard(
-                  image: 'assets/images/Create.png',
-                  buttonText: 'CREATE',
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatePactScreen()));
-                  },
-                ),
-                SizedBox(height: 3.h),
-                _ActionCard(
-                  image: 'assets/images/Join.png',
-                  buttonText: 'JOIN',
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => JoinPactDialog(),
-                    );
-                  },
-                ),
-              ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(height: 5.h),
+                  _ActionCard(
+                    image: 'assets/images/Create.png',
+                    buttonText: 'CREATE',
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const CreatePactScreen()));
+                    },
+                  ),
+                  SizedBox(height: 3.h),
+                  _ActionCard(
+                    image: 'assets/images/Join.png',
+                    buttonText: 'JOIN',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => JoinPactDialog(),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -92,6 +99,7 @@ class _ActionCard extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
             children: [
               SizedBox(
                 height: 15.h,
@@ -144,11 +152,17 @@ class JoinPactDialog extends StatefulWidget {
 class _JoinPactDialogState extends State<JoinPactDialog> {
   final TextEditingController _controller = TextEditingController();
 
+  String _formatInput(String value) {
+    // Only allow up to 6 uppercase characters
+    return value.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '').substring(0, value.length > 6 ? 6 : value.length);
+  }
+
+  bool _loading = false;
+  String? _error;
+
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final size = MediaQuery.of(context).size;
-
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
@@ -159,7 +173,7 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxWidth: 500,
-            maxHeight: size.height * 0.8, // never larger than 80% screen
+            maxHeight: size.height * 0.8,
           ),
           child: Container(
             padding: EdgeInsets.symmetric(
@@ -171,9 +185,8 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // shrink to content
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Close Button
                 Align(
                   alignment: Alignment.topRight,
                   child: GestureDetector(
@@ -185,14 +198,12 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
                     ),
                   ),
                 ),
-
                 Flexible(
                   child: SingleChildScrollView(
                     child: Column(
-                      mainAxisSize: MainAxisSize.min, // keep tight
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Image
                         SizedBox(
                           height: size.height * 0.18,
                           child: Image.asset(
@@ -201,8 +212,6 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
                           ),
                         ),
                         SizedBox(height: size.height * 0.02),
-
-                        // Title
                         Text(
                           "Join Pact",
                           style: TextStyle(
@@ -212,8 +221,6 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
                           textAlign: TextAlign.center,
                         ),
                         SizedBox(height: size.height * 0.01),
-
-                        // Subtext
                         Text(
                           "Stronger together.\nJoin a pact and grow with your team.",
                           textAlign: TextAlign.center,
@@ -223,10 +230,14 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
                           ),
                         ),
                         SizedBox(height: size.height * 0.02),
-
-                        // TextField
                         TextField(
                           controller: _controller,
+                          maxLength: 6,
+                          textCapitalization: TextCapitalization.characters,
+                          inputFormatters: [
+                            // Only allow uppercase and numbers, max 6
+                            UpperCaseTextFormatter(),
+                          ],
                           decoration: InputDecoration(
                             hintText: "Paste Your Code",
                             hintStyle: TextStyle(
@@ -252,11 +263,19 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
                                 width: 2,
                               ),
                             ),
+                            counterText: '',
                           ),
                         ),
                         SizedBox(height: size.height * 0.03),
-
-                        // Button
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Text(
+                              _error!,
+                              style: TextStyle(color: Colors.red, fontSize: 14),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -270,18 +289,86 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
                               ),
                               elevation: 2,
                             ),
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            child: Text(
-                              "JOIN",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: size.width * 0.042,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1,
-                              ),
-                            ),
+                            onPressed: _loading
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      _loading = true;
+                                      _error = null;
+                                    });
+                                    String joinCode = _controller.text.trim().toUpperCase();
+                                    if (joinCode.isEmpty) {
+                                      setState(() {
+                                        _error = 'Please enter a join code.';
+                                        _loading = false;
+                                      });
+                                      return;
+                                    }
+                                    if (joinCode.length != 6) {
+                                      setState(() {
+                                        _error = 'Join code must be 6 characters.';
+                                        _loading = false;
+                                      });
+                                      return;
+                                    }
+                                    final pactProvider = Provider.of<PactProvider>(context, listen: false);
+                                    final success = await pactProvider.joinPact(joinCode.toLowerCase());
+                                    if (success) {
+                                      if (mounted) {
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            elevation: 0,
+                                            backgroundColor: Colors.transparent,
+                                            content: AwesomeSnackbarContent(
+                                              title: 'Success',
+                                              message: 'Successfully joined the pact!',
+                                              contentType: ContentType.success,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      Navigator.of(context).pop();
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            elevation: 0,
+                                            backgroundColor: Colors.transparent,
+                                            content: AwesomeSnackbarContent(
+                                              title: 'Try Again',
+                                              message: pactProvider.error ?? 'Failed to join pact.',
+                                              contentType: ContentType.help,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      setState(() {
+                                        _error = pactProvider.error ?? 'Failed to join pact.';
+                                        _loading = false;
+                                      });
+                                    }
+                                  },
+// Formatter to force uppercase and restrict to 6 chars
+
+                            child: _loading
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : Text(
+                                    "JOIN",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: size.width * 0.042,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
                           ),
                         ),
                       ],
@@ -293,6 +380,18 @@ class _JoinPactDialogState extends State<JoinPactDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    String upper = newValue.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (upper.length > 6) upper = upper.substring(0, 6);
+    return TextEditingValue(
+      text: upper,
+      selection: TextSelection.collapsed(offset: upper.length),
     );
   }
 }

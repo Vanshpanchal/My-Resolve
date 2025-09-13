@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -6,9 +7,16 @@ import 'package:myresolve/Screens/Main/Dashboard.dart';
 import 'package:myresolve/Screens/Main/PactDetail.dart';
 import 'package:myresolve/Utils/FilterBar.dart';
 import 'package:myresolve/Utils/PactCardModel.dart';
+import 'package:provider/provider.dart';
+import 'package:myresolve/Utils/auth_provider.dart';
 import 'package:myresolve/Utils/PactFilterEnum.dart';
 import 'package:myresolve/Utils/PactStatusEnum.dart';
 import 'package:myresolve/Utils/StatsCard.dart';
+import 'package:myresolve/Utils/pact_provider.dart';
+import 'package:shimmer/shimmer.dart';
+
+import 'package:hive/hive.dart';
+import 'package:myresolve/Utils/user_model.dart';
 import 'package:sizer/sizer.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -19,6 +27,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  String userName = '';
+
+
   Duration remaining = const Duration(hours: 12, minutes: 10, seconds: 32);
   Timer? timer;
   PactFilter currentFilter = PactFilter.all;
@@ -26,33 +37,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // NOTE: Assuming Pact.days represents how many days have been completed so far.
   // If you also have a "target / total" days count, replace the hard‑coded
   // totalDays logic below with the real field.
-  final List<Pact> pacts = [
-    Pact(
-      title: 'Fitness Pact',
-      creator: 'Virat Kohli',
-      createdAt: DateTime(2025, 7, 18),
-      days: 70,
-      status: PactStatus.active,
-    ),
-    Pact(
-      title: 'No Social Media Pact',
-      creator: 'Virat Kohli',
-      createdAt: DateTime(2025, 7, 18),
-      days: 12,
-      status: PactStatus.wasted,
-    ),
-    Pact(
-      title: 'No Social Media Pact',
-      creator: 'Virat Kohli',
-      createdAt: DateTime(2025, 7, 18),
-      days: 45,
-      status: PactStatus.completed,
-    ),
-  ];
+  // Remove hardcoded pacts, use provider
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final pactProvider = Provider.of<PactProvider>(context, listen: false);
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await pactProvider.fetchPacts();
+      if (pactProvider.error != null) {
+        final snackBar = SnackBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Error',
+            message: pactProvider.error!,
+            contentType: ContentType.failure,
+          ),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    final userBox = Hive.box<UserModel>('userBox');
+    if (userBox.isNotEmpty) {
+      userName = userBox.getAt(0)?.name ?? '';
+    }
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       setState(() {
@@ -71,14 +87,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   bool _isFailed(Pact p) => p.status == PactStatus.wasted;
   bool _isCompleted(Pact p) => p.status == PactStatus.completed;
 
-  List<Pact> get filteredPacts {
+  List<PactApiModel> getFilteredPacts(List<PactApiModel> pacts) {
     switch (currentFilter) {
       case PactFilter.active:
-        return pacts.where((p) => p.status == PactStatus.active).toList();
+        return pacts.where((p) => p.status == 'active').toList();
       case PactFilter.failed:
-        return pacts.where(_isFailed).toList();
+        return pacts.where((p) => p.status == 'wasted').toList();
       case PactFilter.completed:
-        return pacts.where(_isCompleted).toList();
+        return pacts.where((p) => p.status == 'completed').toList();
       case PactFilter.all:
       default:
         return pacts;
@@ -111,84 +127,176 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final timeStr =
         '${_two(remaining.inHours)} : ${_two(remaining.inMinutes % 60)} : ${_two(remaining.inSeconds % 60)}';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F8FB),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset('assets/images/Blur.png', fit: BoxFit.cover),
-          ),
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(child: SizedBox(height: 2.2.h)),
-                SliverToBoxAdapter(child: _header()),
-                SliverToBoxAdapter(child: SizedBox(height: 2.0.h)),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5.w),
-                    child: _countdownCard(timeStr),
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: 2.4.h)),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5.w),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: StatCard(
-                            value: '12',
-                            label: 'Active Pacts',
-                            illustration: 'assets/images/pact.png',
+    return Consumer<PactProvider>(
+      builder: (context, pactProvider, _) {
+        final pactData = pactProvider.pactData;
+        final loading = pactProvider.loading;
+        final error = pactProvider.error;
+        final pacts = pactData?.pacts ?? [];
+        final filteredPacts = getFilteredPacts(pacts);
+        return Scaffold(
+          backgroundColor: const Color(0xFFF5F8FB),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset('assets/images/Blur.png', fit: BoxFit.cover),
+              ),
+              SafeArea(
+                child: error != null
+                    ? Center(child: Text(error))
+                    : CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(child: SizedBox(height: 2.2.h)),
+                          SliverToBoxAdapter(child: _header()),
+                          SliverToBoxAdapter(child: SizedBox(height: 2.0.h)),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 5.w),
+                              child: loading
+                                  ? Shimmer.fromColors(
+                                      baseColor: Colors.grey[300]!,
+                                      highlightColor: Colors.grey[100]!,
+                                      child: Container(
+                                        height: 16.h,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(5.w),
+                                        ),
+                                      ),
+                                    )
+                                  : _countdownCard(timeStr),
+                            ),
                           ),
-                        ),
-                        SizedBox(width: 4.w),
-                        Expanded(
-                          child: StatCard(
-                            value: '32',
-                            label: 'Current Streak',
-                            illustration: 'assets/images/streak.png',
+                          SliverToBoxAdapter(child: SizedBox(height: 2.4.h)),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 5.w),
+                              child: loading
+                                  ? Row(
+                                      children: [
+                                        Expanded(
+                                          child: Shimmer.fromColors(
+                                            baseColor: Colors.grey[300]!,
+                                            highlightColor: Colors.grey[100]!,
+                                            child: Container(
+                                              height: 16.h,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(5.w),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 4.w),
+                                        Expanded(
+                                          child: Shimmer.fromColors(
+                                            baseColor: Colors.grey[300]!,
+                                            highlightColor: Colors.grey[100]!,
+                                            child: Container(
+                                              height: 16.h,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius: BorderRadius.circular(5.w),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Expanded(
+                                          child: StatCard(
+                                            value: (pactData?.pacts.where((p) => p.status == 'active').length ?? 0).toString(),
+                                            label: 'Active Pacts',
+                                            illustration: 'assets/images/pact.png',
+                                          ),
+                                        ),
+                                        SizedBox(width: 4.w),
+                                        Expanded(
+                                          child: StatCard(
+                                            value: (pactData?.streak ?? 0).toString(),
+                                            label: 'Current Streak',
+                                            illustration: 'assets/images/streak.png',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: 3.h)),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 5.w),
-                    child: FilterBar(
-                      current: currentFilter,
-                      onChanged: (f) => setState(() => currentFilter = f),
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: 1.2.h)),
-                SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                      final pact = filteredPacts[i];
-                      return PactCardProfile(
-                        title: pact.title,
-                        createdBy: pact.creator,
-                        createdDate: DateFormat('dd MMM yyyy').format(pact.createdAt),
-                        status: pact.status,
-                        statusText: statusTextFor(pact.status),
-                        completedDays: pact.status == PactStatus.active ? pact.days : null,
-                        totalDays: pact.status == PactStatus.active ? totalDaysFor(pact) : null,
-                      );
-                    },
-                    childCount: filteredPacts.length,
-                  ),
-                ),
-                SliverToBoxAdapter(child: SizedBox(height: 4.h)),
-              ],
-            ),
+                          SliverToBoxAdapter(child: SizedBox(height: 3.h)),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 5.w),
+                              child: loading
+                                  ? Shimmer.fromColors(
+                                      baseColor: Colors.grey[300]!,
+                                      highlightColor: Colors.grey[100]!,
+                                      child: Container(
+                                        height: 40,
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                    )
+                                  : FilterBar(
+                                      current: currentFilter,
+                                      onChanged: (f) => setState(() => currentFilter = f),
+                                    ),
+                            ),
+                          ),
+                          SliverToBoxAdapter(child: SizedBox(height: 1.2.h)),
+                          loading
+                              ? SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, i) => Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 1.h),
+                                      child: Shimmer.fromColors(
+                                        baseColor: Colors.grey[300]!,
+                                        highlightColor: Colors.grey[100]!,
+                                        child: Container(
+                                          height: 100,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    childCount: 3,
+                                  ),
+                                )
+                              : SliverList(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, i) {
+                                      final pact = filteredPacts[i];
+                                      return PactCardProfile(
+                                        title: pact.name,
+                                        createdBy: pact.createdBy,
+                                        createdDate: DateFormat('dd MMM yyyy').format(pact.createdAt),
+                                        status: pact.status == 'active'
+                                            ? PactStatus.active
+                                            : pact.status == 'completed'
+                                                ? PactStatus.completed
+                                                : PactStatus.wasted,
+                                        statusText: pact.status,
+                                        completedDays: pact.daysDone,
+                                        totalDays: pact.totalDays,
+                                      );
+                                    },
+                                    childCount: filteredPacts.length,
+                                  ),
+                                ),
+                          SliverToBoxAdapter(child: SizedBox(height: 4.h)),
+                        ],
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -229,9 +337,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     children: [
                       const TextSpan(text: 'Hi, '),
-                      const TextSpan(
-                        text: 'Travis',
-                        style: TextStyle(fontWeight: FontWeight.w800),
+                      TextSpan(
+                        text: userName,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       TextSpan(
                         text: ' 👋',

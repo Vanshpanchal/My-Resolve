@@ -3,6 +3,11 @@ import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:myresolve/Screens/Authentication/Login.dart';
 import 'package:myresolve/Utils/Colors.dart';
+
+import 'package:provider/provider.dart';
+import 'package:myresolve/Utils/auth_provider.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:sizer/sizer.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -20,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  String _selectedCountryCode = '+91';
   bool _obscureText = true;
 
   @override
@@ -60,6 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FB),
       body: Stack(
@@ -78,7 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
           ),
-          // Main UI
           SingleChildScrollView(
             child: SizedBox(
               width: 100.w,
@@ -109,7 +115,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ),
-
                     ),
                     SizedBox(height: 3.h),
                     Align(
@@ -202,7 +207,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(fontSize: 16.sp),
                     ),
                     SizedBox(height: 2.h),
-                    PhoneInputWithDropdown(controller: _phoneController),
+                    PhoneInputWithDropdown(
+                      controller: _phoneController,
+                      onCountryCodeChanged: (code) {
+                        setState(() {
+                          _selectedCountryCode = code;
+                        });
+                      },
+                    ),
                     SizedBox(height: 2.h),
                     // Password
                     TextField(
@@ -238,11 +250,95 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       height: 6.5.h,
                       child: gradientButton(
                         context,
-                        onPressed: () {
-                          // Register logic here
+                        onPressed: () async {
+                          final name = (_firstNameController.text.trim() + ' ' + _lastNameController.text.trim()).trim();
+                          final email = _emailController.text.trim();
+                          final password = _passwordController.text.trim();
+                          final dobText = _dobController.text.trim();
+                          final phone = _phoneController.text.trim();
+                          if (name.isEmpty || email.isEmpty || password.isEmpty || dobText.isEmpty || phone.isEmpty) {
+                            EasyLoading.dismiss();
+                            final snackBar = SnackBar(
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                title: 'Error',
+                                message: 'Please fill all fields',
+                                contentType: ContentType.failure,
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            return;
+                          }
+                          // Convert dob to yyyy-MM-dd
+                          String dobFormatted = '';
+                          try {
+                            final parts = dobText.split('/');
+                            if (parts.length == 3) {
+                              dobFormatted = '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+                            }
+                          } catch (_) {}
+                          if (dobFormatted.isEmpty) {
+                            EasyLoading.dismiss();
+                            final snackBar = SnackBar(
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                title: 'Error',
+                                message: 'Invalid date of birth',
+                                contentType: ContentType.failure,
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            return;
+                          }
+                          // Use selected country code from dropdown
+                          final countryCode = _selectedCountryCode;
+                          final mobileNumber = phone;
+                          EasyLoading.show(status: 'Registering...');
+                      final result = await authProvider.register(
+                            name: name,
+                            email: email,
+                            password: password,
+                            dob: dobFormatted,
+                            countryCode: countryCode,
+                            mobileNumber: mobileNumber,
+                          );
+                          EasyLoading.dismiss();
+                          print(result['success']);
+                      if (result['success'] == true) {
+                            final snackBar = SnackBar(
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                title: 'Success',
+                                message: 'Registration successful!',
+                                contentType: ContentType.success,
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            await Future.delayed(const Duration(milliseconds: 800));
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(),
+                              ),
+                            );
+                          } else {
+                            print(result['message']+"in else");
+                            final snackBar = SnackBar(
+                              elevation: 0,
+                              backgroundColor: Colors.transparent,
+                              content: AwesomeSnackbarContent(
+                                title: 'Error',
+                            message: result['message'] ?? 'Registration failed',
+                                contentType: ContentType.failure,
+                              ),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                          }
                         },
                         text: "Register",
-
                       ),
                     ),
                     SizedBox(height: 2.5.h),
@@ -264,7 +360,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 builder: (context) => const LoginScreen(),
                               ),
                             );
-                            // Navigate to login
                           },
                           child: Text(
                             "Log in",
@@ -371,20 +466,39 @@ final List<Map<String, String>> _countries = [
   {"flag": "🇨🇭", "code": "+41"},
 ];
 
+
 class PhoneInputWithDropdown extends StatefulWidget {
-  const PhoneInputWithDropdown({Key? key, required this.controller}) : super(key: key);
+  const PhoneInputWithDropdown({Key? key, required this.controller, required this.onCountryCodeChanged}) : super(key: key);
 
   final TextEditingController controller;
+  final void Function(String) onCountryCodeChanged;
 
   @override
   State<PhoneInputWithDropdown> createState() => _PhoneInputWithDropdownState();
 }
 
 class _PhoneInputWithDropdownState extends State<PhoneInputWithDropdown> {
+  // Map country code to max length
+  final Map<String, int> _countryPhoneLengths = {
+    '+91': 10, // India
+    '+1': 10,  // USA
+    '+44': 10, // UK (varies, but 10 for mobiles)
+    '+41': 9,  // Switzerland (varies, 9 for mobiles)
+  };
+
   Map<String, String> selectedCountry = _countries[0];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onCountryCodeChanged(selectedCountry['code']!);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    int maxLength = _countryPhoneLengths[selectedCountry['code']] ?? 10;
     return Row(
       children: [
         Container(
@@ -402,7 +516,6 @@ class _PhoneInputWithDropdownState extends State<PhoneInputWithDropdown> {
               value: selectedCountry,
               dropdownColor: AppColors.background,
               borderRadius: BorderRadius.circular(3.w),
-
               items: _countries.map((country) {
                 return DropdownMenuItem<Map<String, String>>(
                   value: country,
@@ -420,6 +533,7 @@ class _PhoneInputWithDropdownState extends State<PhoneInputWithDropdown> {
                   setState(() {
                     selectedCountry = value;
                   });
+                  widget.onCountryCodeChanged(selectedCountry['code']!);
                 }
               },
               icon: Icon(Icons.keyboard_arrow_down_rounded, size: 20.sp, color: Colors.grey),
@@ -430,7 +544,9 @@ class _PhoneInputWithDropdownState extends State<PhoneInputWithDropdown> {
           child: TextField(
             controller: widget.controller,
             keyboardType: TextInputType.phone,
+            maxLength: maxLength,
             decoration: InputDecoration(
+              counterText: '',
               contentPadding: EdgeInsets.symmetric(vertical: 2.0.h, horizontal: 3.w),
               filled: true,
               fillColor: Colors.white,

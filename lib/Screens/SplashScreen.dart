@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:sizer/sizer.dart';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,10 +15,18 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Navigate after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
+    _checkAuthAndNavigate();
+  }
+
+  Future<void> _checkAuthAndNavigate() async {
+    await Future.delayed(const Duration(seconds: 2));
+    const storage = FlutterSecureStorage();
+    String? token = await storage.read(key: 'token');
+    if (token != null && token.isNotEmpty) {
+      Navigator.of(context).pushReplacementNamed('/main');
+    } else {
       Navigator.of(context).pushReplacementNamed('/login');
-    });
+    }
   }
 
   @override

@@ -3,6 +3,11 @@ import 'package:myresolve/Screens/Authentication/Register.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
 import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
+
+import 'package:provider/provider.dart';
+import 'package:myresolve/Utils/auth_provider.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:sizer/sizer.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -40,18 +45,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FB),
       body: Stack(
         children: [
-          // Blue wavy background at the top
           SizedBox(
             height: 20.h,
             width: 100.w,
             child: Stack(
               fit: StackFit.expand,
               children: [
-
                 Image.asset(
                   'assets/images/Blur.png',
                   fit: BoxFit.cover,
@@ -60,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ],
             ),
           ),
-          // Main UI
           SingleChildScrollView(
             child: SizedBox(
               width: 100.w,
@@ -174,15 +177,56 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 6.5.h,
                         child: gradientButton(
                           context,
-                          onPressed: () {
-
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const OnboardingScreen(),
-                              ),
-                            );
-                            // Login logic here
+                          onPressed: () async {
+                            final email = _emailController.text.trim();
+                            final password = _passwordController.text.trim();
+                            if (email.isEmpty || password.isEmpty) {
+                              EasyLoading.dismiss();
+                              final snackBar = SnackBar(
+                                elevation: 0,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'Error',
+                                  message: 'Please enter email and password',
+                                  contentType: ContentType.failure,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                              return;
+                            }
+                            EasyLoading.show(status: 'Logging in...');
+                            final result = await authProvider.login(email, password);
+                            EasyLoading.dismiss();
+                            if (result['success'] == true) {
+                              final snackBar = SnackBar(
+                                elevation: 0,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'Success',
+                                  message: 'Login successful!',
+                                  contentType: ContentType.success,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                              await Future.delayed(const Duration(milliseconds: 800));
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const OnboardingScreen(),
+                                ),
+                              );
+                            } else {
+                              final snackBar = SnackBar(
+                                elevation: 0,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'Error',
+                                  message: result['message'] ?? 'Login failed. Please check your credentials.',
+                                  contentType: ContentType.failure,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            }
                           },
                           text: "Login",
                         ),
@@ -206,7 +250,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   builder: (context) => const RegisterScreen(),
                                 ),
                               );
-                              // Sign Up logic here
                             },
                             child: Text(
                               "Sign Up",
