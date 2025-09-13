@@ -6,6 +6,44 @@ import 'package:myresolve/Utils/PactCardModel.dart';
 import 'package:myresolve/Utils/api_endpoints.dart';
 
 class PactProvider with ChangeNotifier {
+  Future<Map<String, dynamic>> createPact({required String name, required String description, required int totalDays}) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final token = await _storage.read(key: 'token');
+      final url = Uri.parse(ApiEndpoints.baseUrl + ApiEndpoints.pacts);
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'name': name,
+          'description': description,
+          'totalDays': totalDays,
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        await fetchPacts();
+        return {'success': true, 'data': data};
+      } else {
+        final body = jsonDecode(response.body);
+        _error = body['message'] ?? 'Failed to create pact';
+        notifyListeners();
+        return {'success': false, 'error': _error};
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return {'success': false, 'error': _error};
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
   Future<bool> joinPact(String joinCode) async {
     _loading = true;
     _error = null;

@@ -1,7 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:sizer/sizer.dart';
+import 'package:myresolve/Utils/notification_service.dart';
 
 class SettingsScreen extends StatelessWidget {
+  Future<void> _pickReminderTime(BuildContext context) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Color(0xFF1D61E7), // App blue
+              onPrimary: Colors.white, // Text on blue
+              onSurface: Colors.black, // Text on white
+            ),
+            dialogBackgroundColor: Colors.white,
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Colors.white,
+              hourMinuteColor: MaterialStateColor.resolveWith((states) => Color(0xFF1D61E7)),
+              hourMinuteTextColor: MaterialStateColor.resolveWith((states) => Colors.white),
+              dayPeriodColor: MaterialStateColor.resolveWith((states) => Color(0xFF1D61E7)),
+              dayPeriodTextColor: MaterialStateColor.resolveWith((states) => Colors.white),
+              dialHandColor: Color(0xFF1D61E7),
+              dialBackgroundColor: Color(0xFFE7EFFA),
+              entryModeIconColor: Color(0xFF1D61E7),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      final box = await Hive.openBox('reminderBox');
+      await box.put('reminder', {'hour': picked.hour, 'minute': picked.minute});
+      // Schedule notification
+  await NotificationService.scheduleDailyReminder(picked.hour, picked.minute, context: context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Daily reminder set for ${picked.format(context)}')),
+      );
+    }
+  }
   const SettingsScreen({super.key});
 
   @override
@@ -65,6 +105,23 @@ class SettingsScreen extends StatelessWidget {
                             label: 'Forgot Password',
                             onTap: () {
                               // TODO: Implement forgot password logic
+                            },
+                          ),
+                          SizedBox(height: 2.h),
+                          _SettingsButton(
+                            icon: Icons.alarm,
+                            label: 'Daily Reminder',
+                            onTap: () => _pickReminderTime(context),
+                          ),
+                          SizedBox(height: 2.h),
+                          _SettingsButton(
+                            icon: Icons.notifications_active,
+                            label: 'Test Notification',
+                            onTap: () async {
+                              await NotificationService.showImmediateNotification();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Test notification triggered.')),
+                              );
                             },
                           ),
                           SizedBox(height: 2.h),

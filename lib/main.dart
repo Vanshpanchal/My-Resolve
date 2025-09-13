@@ -1,11 +1,15 @@
+import 'Utils/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
+import 'package:myresolve/Screens/Main/PactDetail.dart';
 import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
 import 'package:myresolve/Screens/SplashScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:myresolve/Utils/auth_provider.dart';
+import 'package:myresolve/Utils/notification_service.dart' hide NotificationService;
+import 'package:myresolve/Utils/reminder_model.dart';
 import 'package:myresolve/Utils/user_model.dart' hide UserModel, UserModelAdapter;
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
@@ -15,6 +19,7 @@ import 'Screens/Authentication/Login.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'Utils/user_model.dart';
 import 'package:myresolve/Utils/pact_provider.dart';
+import 'package:myresolve/Utils/user_profile_provider.dart';
 
 void main() {
   // SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.top]); // Shows only status bar
@@ -24,12 +29,15 @@ void main() {
   // ));
   // FlutterNativeSplash.remove();
   WidgetsFlutterBinding.ensureInitialized();
-  _initHive().then((_) {
+  _initHive().then((_) async {
+    // Initialize notifications
+    await NotificationService.initialize();
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider(create: (_) => AuthProvider()),
           ChangeNotifierProvider(create: (_) => PactProvider()),
+          ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ],
         child: const MyApp(),
       ),
@@ -41,7 +49,12 @@ void main() {
 Future<void> _initHive() async {
   await Hive.initFlutter();
   Hive.registerAdapter(UserModelAdapter());
+  // Register ReminderModel adapter
+  try {
+    Hive.registerAdapter(ReminderModelAdapter());
+  } catch (_) {}
   await Hive.openBox<UserModel>('userBox');
+  await Hive.openBox('reminderBox');
 }
 
 void configLoading() {
@@ -93,6 +106,7 @@ class MyApp extends StatelessWidget {
                 '/login': (context) => const LoginScreen(),
                 '/register': (context) => const RegisterScreen(),
                 '/main': (context) => const HomeScreen(),
+                '/pactDetail': (context) => PactDetailScreen(),
               },
             );
           },

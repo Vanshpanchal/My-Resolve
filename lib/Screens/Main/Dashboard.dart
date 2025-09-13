@@ -7,6 +7,7 @@ import 'package:myresolve/Screens/Main/Dashboard.dart';
 import 'package:myresolve/Screens/Main/PactDetail.dart';
 import 'package:myresolve/Utils/FilterBar.dart';
 import 'package:myresolve/Utils/PactCardModel.dart';
+import 'package:myresolve/Utils/reminder_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:myresolve/Utils/auth_provider.dart';
 import 'package:myresolve/Utils/PactFilterEnum.dart';
@@ -28,11 +29,10 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String userName = '';
-
-
-  Duration remaining = const Duration(hours: 12, minutes: 10, seconds: 32);
-  Timer? timer;
   PactFilter currentFilter = PactFilter.all;
+
+  final ValueNotifier<String> _reminderTimeStrNotifier = ValueNotifier('00:00:00');
+  Timer? _reminderTimer;
 
   // NOTE: Assuming Pact.days represents how many days have been completed so far.
   // If you also have a "target / total" days count, replace the hard‑coded
@@ -52,9 +52,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           content: AwesomeSnackbarContent(
             title: 'Error',
             message: pactProvider.error!,
-            contentType: ContentType.failure,
-          ),
-        );
+            contentType: ContentType.failure));
+            // Show daily reminder countdown if set, else fallback to old timer
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(snackBar);
         }
@@ -69,32 +69,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (userBox.isNotEmpty) {
       userName = userBox.getAt(0)?.name ?? '';
     }
-    timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        remaining -= const Duration(seconds: 1);
-        if (remaining.isNegative) remaining = Duration.zero;
-      });
-    });
+    _updateReminderCountdown();
+    _reminderTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateReminderCountdown());
+  }
+
+  void _updateReminderCountdown() async {
+    final duration = await ReminderHelper.getTimeUntilNextReminder();
+    _reminderTimeStrNotifier.value = ReminderHelper.formatDuration(duration);
   }
 
   @override
   void dispose() {
-    timer?.cancel();
+    _reminderTimer?.cancel();
+    _reminderTimeStrNotifier.dispose();
     super.dispose();
   }
 
   bool _isFailed(Pact p) => p.status == PactStatus.wasted;
   bool _isCompleted(Pact p) => p.status == PactStatus.completed;
 
+  String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
+
   List<PactApiModel> getFilteredPacts(List<PactApiModel> pacts) {
     switch (currentFilter) {
       case PactFilter.active:
-        return pacts.where((p) => p.status == 'active').toList();
+        return pacts.where((p) => _capitalize(p.status) == 'Active').toList();
       case PactFilter.failed:
-        return pacts.where((p) => p.status == 'wasted').toList();
+        return pacts.where((p) => _capitalize(p.status) == 'Failed').toList();
       case PactFilter.completed:
-        return pacts.where((p) => p.status == 'completed').toList();
+        return pacts.where((p) => _capitalize(p.status) == 'Completed').toList();
       case PactFilter.all:
       default:
         return pacts;
@@ -108,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case PactStatus.active:
         return 'Active';
       case PactStatus.completed:
-        return 'Done';
+        return 'Gained';
       case PactStatus.wasted:
         return 'Failed';
     }
@@ -124,9 +127,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final timeStr =
-        '${_two(remaining.inHours)} : ${_two(remaining.inMinutes % 60)} : ${_two(remaining.inSeconds % 60)}';
+    // Reminder countdown ValueNotifier and timer
 
+    void _updateReminderCountdown() async {
+      final duration = await ReminderHelper.getTimeUntilNextReminder();
+      _reminderTimeStrNotifier.value = ReminderHelper.formatDuration(duration);
+    }
+    @override
+    void initState() {
+      super.initState();
+      _updateReminderCountdown();
+      _reminderTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateReminderCountdown());
+    }
+    @override
+    void dispose() {
+      _reminderTimer?.cancel();
+      _reminderTimeStrNotifier.dispose();
+      super.dispose();
+    }
     return Consumer<PactProvider>(
       builder: (context, pactProvider, _) {
         final pactData = pactProvider.pactData;
@@ -152,19 +170,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           SliverToBoxAdapter(
                             child: Padding(
                               padding: EdgeInsets.symmetric(horizontal: 5.w),
-                              child: loading
-                                  ? Shimmer.fromColors(
-                                      baseColor: Colors.grey[300]!,
-                                      highlightColor: Colors.grey[100]!,
-                                      child: Container(
-                                        height: 16.h,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(5.w),
-                                        ),
-                                      ),
-                                    )
-                                  : _countdownCard(timeStr),
+                              child: ValueListenableBuilder(
+                                valueListenable: _reminderTimeStrNotifier,
+                                builder: (context, String timeStr, _) {
+                                  return _countdownCard(timeStr);
+                                },
+                              ),
                             ),
                           ),
                           SliverToBoxAdapter(child: SizedBox(height: 2.4.h)),
@@ -207,8 +218,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       children: [
                                         Expanded(
                                           child: StatCard(
-                                            value: (pactData?.pacts.where((p) => p.status == 'active').length ?? 0).toString(),
-                                            label: 'Active Pacts',
+                                            value: (pactData?.totalJoined ?? 0).toString(),
+                                            label: 'Total Joined Pacts',
                                             illustration: 'assets/images/pact.png',
                                           ),
                                         ),
@@ -281,7 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             : pact.status == 'completed'
                                                 ? PactStatus.completed
                                                 : PactStatus.wasted,
-                                        statusText: pact.status,
+                                        statusText: pact.status == 'completed' ? 'Gained' : pact.status,
                                         completedDays: pact.daysDone,
                                         totalDays: pact.totalDays,
                                       );
@@ -484,11 +495,10 @@ class PactCardProfile extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () {
-              Navigator.push(
+              Navigator.pushNamed(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => PactDetailScreen(), // Replace with actual detail screen
-                ),
+                '/pactDetail',
+                arguments: {'title': title},
               );
             },
             child: Container(
@@ -640,7 +650,7 @@ class PactStatusBadge extends StatelessWidget {
             )
                 : Center(
               child: Text(
-                statusText,
+                statusText[0].toUpperCase() + statusText.substring(1),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,

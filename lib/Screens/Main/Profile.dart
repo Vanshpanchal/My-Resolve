@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:myresolve/Screens/Main/Dashboard.dart';
+import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
 import 'package:myresolve/Screens/Main/Setting.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:myresolve/Utils/PactStatusEnum.dart';
+import 'package:myresolve/Utils/pact_provider.dart';
+import 'package:myresolve/Utils/user_model.dart';
+import 'package:myresolve/Utils/user_profile_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
+import 'package:shimmer/shimmer.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,18 +23,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int selectedTabIndex = 1; // 1 = ACTIVITY, 0 = ACHIEVEMENTS
 
   void _onSettingsTap() {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+    );
     debugPrint('Settings icon tapped');
   }
 
   @override
-  void initState() {
-    super.initState();
-
-  }
-  @override
   Widget build(BuildContext context) {
-
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
@@ -47,74 +49,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         padding: EdgeInsets.symmetric(vertical: 8.h),
                         child: Column(
                           children: [
-                            // UPDATED AVATAR WITH SETTINGS ICON
-                            SizedBox(
-                              width: 14.h,
-                              height: 14.h,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Container(
-                                    width: 14.h,
-                                    height: 14.h,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 3,
-                                      ),
-                                    ),
-                                    child: CircleAvatar(
-                                      radius: 7.h,
-                                      backgroundImage: const AssetImage(
-                                        'assets/images/profile.jpg',
-                                      ),
-                                      backgroundColor: Colors.transparent,
-                                    ),
-                                  ),
-
-                                  // Settings icon positioned INSIDE the avatar (bottom-right)
-                                ],
-                              ),
+                            _HeaderSection(
+                              onSettingsTap: _onSettingsTap,
+                              // You can later drive this with a provider if profile meta loading needed
+                              loading: false,
                             ),
-                            SizedBox(height: 1.5.h),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Virat Kohli',
-                                  style: TextStyle(
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: 2.w),
-                                GestureDetector(
-                                  onTap: _onSettingsTap,
-                                  child: Container(
-                                    padding: EdgeInsets.all(0.5.h),
-                                    width: 3.5.h,
-                                    height: 3.5.h,
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFFDEE7FF),
-                                      shape: BoxShape.rectangle,
-                                      borderRadius: BorderRadius.circular(1.h),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.15),
-                                          blurRadius: 0.8.h,
-                                          offset: Offset(0, 0.4.h),
-                                        ),
-                                      ],
-                                    ),
-                                    child: SvgPicture.asset(
-                                      'assets/icons/Frame.svg',
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
                             SizedBox(height: 3.h),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -134,7 +73,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ),
                       selectedTabIndex == 0
-                          ? _buildActivityTab()
+                      ?_buildActivityTab()
+
                           : _buildAchievementsTab(),
                     ],
                   ),
@@ -147,153 +87,222 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ---------------- Existing methods below (unchanged) ----------------
-
+  // ---------------- Activity Tab with Shimmer ----------------
   Widget _buildActivityTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const PactCardProfile(
-          title: 'Fitness Pact',
-          createdBy: 'Virat Kohli',
-          createdDate: '18th July 2025',
-          status: PactStatus.active,
-          statusText: '',
-          completedDays: 70,
-          totalDays: 100,
-        ),
-        const PactCardProfile(
-          title: 'No Social Media Pact',
-          createdBy: 'Virat Kohli',
-          createdDate: '18th July 2025',
-          status: PactStatus.completed,
-          statusText: 'GAINED',
-          completedDays: 100,
-          totalDays: 100,
-        ),
-        PactCardProfile(
-          title: 'No Social Media Pact',
-          createdBy: 'Virat Kohli',
-          createdDate: '18th July 2025',
-          status: PactStatus.wasted,
-          statusText: 'FAILED',
-          completedDays: 100,
-          totalDays: 100,
-        ),
-      ],
+    return Consumer<PactProvider>(
+      builder: (context, pactProvider, _) {
+        final loading = pactProvider.loading;
+        final pacts = pactProvider.pactData?.pacts ?? [];
+
+        if (loading) {
+          return Column(
+            children: List.generate(3, (i) => const PactCardShimmer()),
+          );
+        }
+
+        if (pacts.isEmpty) {
+          return Padding(
+            padding: EdgeInsets.only(top: 4.h),
+            child: Center(
+              child: Text(
+                'No activity found.',
+                style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: pacts.map((pact) {
+            final status = pact.status == 'active'
+                ? PactStatus.active
+                : pact.status == 'completed'
+                ? PactStatus.completed
+                : PactStatus.wasted;
+            final statusText = pact.status == 'completed'
+                ? 'Gained'
+                : pact.status;
+            return GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  '/pactDetail',
+                  arguments: {'title': pact.name},
+                );
+              },
+              child: PactCardProfile(
+                title: pact.name,
+                createdBy: pact.createdBy,
+                createdDate: DateFormat('dd MMM yyyy').format(pact.createdAt),
+                status: status,
+                statusText: statusText,
+                completedDays: pact.daysDone,
+                totalDays: pact.totalDays,
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 
+  // ---------------- Achievements Tab with Shimmer ----------------
   Widget _buildAchievementsTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: _levelCard(),
-        ),
-        SizedBox(height: 3.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 3.w),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'MEDALS',
-              style: TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.bold,
-                fontSize: 16.sp,
+    return Consumer<UserProfileProvider>(
+      builder: (context, userProvider, _) {
+        final loading = userProvider.loading;
+
+        if (loading) {
+          return const AchievementsShimmer();
+        }
+
+        final user = userProvider.userProfile;
+        if (userProvider.error != null) {
+          return Center(child: Text('Error: ${userProvider.error}'));
+        }
+        if (user == null) {
+          // trigger fetch if not started
+          userProvider.fetchUserProfile();
+          return const AchievementsShimmer();
+        }
+
+        final medals = user['medals'] ?? {};
+        final certifications = user['certifications'] ?? {};
+        final points = user['points'] ?? 0;
+        final level = user['level'] ?? 1;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: _levelCardCustom(level: level, points: points),
+            ),
+            SizedBox(height: 3.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3.w),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'MEDALS',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        SizedBox(height: 2.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 3.w),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _medalCard(
-                'Gold',
-                Colors.amber,
-                '24',
-                Colors.amber.shade50,
-                "assets/images/Gold.svg",
-                key: UniqueKey(),
-              ),
-              _medalCard(
-                'Silver',
-                Colors.grey,
-                '18',
-                Colors.grey.shade50,
-                "assets/images/Silver.svg",
-                key: UniqueKey(),
-              ),
-              _medalCard(
-                'Bronze',
-                Colors.brown.shade300,
-                '11',
-                Colors.brown.shade50,
-                "assets/images/Bronze.svg",
-                key: UniqueKey(),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 3.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 3.w),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'CERTIFICATIONS',
-              style: TextStyle(
-                color: Colors.grey,
-                fontWeight: FontWeight.bold,
-                fontSize: 16.sp,
+            SizedBox(height: 2.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3.w),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _medalCard(
+                    'Gold',
+                    Colors.amber,
+                    medals['gold']?.toString() ?? '0',
+                    Colors.amber.shade50,
+                    "assets/images/Gold.svg",
+                    key: UniqueKey(),
+                  ),
+                  _medalCard(
+                    'Silver',
+                    Colors.grey,
+                    medals['silver']?.toString() ?? '0',
+                    Colors.grey.shade50,
+                    "assets/images/Silver.svg",
+                    key: UniqueKey(),
+                  ),
+                  _medalCard(
+                    'Bronze',
+                    Colors.brown.shade300,
+                    medals['bronze']?.toString() ?? '0',
+                    Colors.brown.shade50,
+                    "assets/images/Bronze.svg",
+                    key: UniqueKey(),
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
-        SizedBox(height: 2.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 3.w),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            clipBehavior: Clip.none,
-            child: Row(
-              children: [
-                _certCard(
-                  '10 pact\nCompleted',
-                  'CERTIFIED',
-                  const Color(0x33D0C6AA),
-                  Colors.grey.shade300,
-                  key: UniqueKey(),
+            SizedBox(height: 3.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3.w),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'CERTIFICATIONS',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                  ),
                 ),
-                _certCard(
-                  '20 pact\nCompleted',
-                  'CERTIFIED',
-                  Colors.grey.shade50,
-                  Colors.grey.shade300,
-                  key: UniqueKey(),
-                ),
-                _certCard(
-                  '30 pact\nCompleted',
-                  'CERTIFIED',
-                  Colors.grey.shade50,
-                  Colors.grey.shade300,
-                  key: UniqueKey(),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-        SizedBox(height: 3.h),
-      ],
+            SizedBox(height: 2.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3.w),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                child: Row(
+                  children: [
+                    _certCard(
+                      '10 pact\nCompleted',
+                      certifications['pacts10'] == true
+                          ? 'CERTIFIED'
+                          : 'LOCKED',
+                      certifications['pacts10'] == true
+                          ? const Color(0x33D0C6AA)
+                          : Colors.grey.shade200,
+                      Colors.grey.shade300,
+                      key: UniqueKey(),
+                    ),
+                    _certCard(
+                      '20 pact\nCompleted',
+                      certifications['pacts20'] == true
+                          ? 'CERTIFIED'
+                          : 'LOCKED',
+                      certifications['pacts20'] == true
+                          ? Colors.grey.shade50
+                          : Colors.grey.shade200,
+                      Colors.grey.shade300,
+                      key: UniqueKey(),
+                    ),
+                    _certCard(
+                      '30 pact\nCompleted',
+                      certifications['pacts30'] == true
+                          ? 'CERTIFIED'
+                          : 'LOCKED',
+                      certifications['pacts30'] == true
+                          ? Colors.grey.shade50
+                          : Colors.grey.shade200,
+                      Colors.grey.shade300,
+                      key: UniqueKey(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 3.h),
+          ],
+        );
+      },
     );
   }
 
-  Widget _levelCard() {
+  Widget _levelCardCustom({required int level, required int points}) {
+    int nextLevel = level + 1;
+    int pointsForNextLevel = level * 1000;
+    int currentLevelPoints = level * 1000;
+    int pointsToNext = pointsForNextLevel - points;
+    double progress =
+        (points - currentLevelPoints) /
+            (pointsForNextLevel - currentLevelPoints);
+    progress = progress.clamp(0.0, 1.0);
     return Container(
       padding: EdgeInsets.all(3.w),
       decoration: BoxDecoration(
@@ -315,7 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 radius: 2.5.h,
                 backgroundColor: Colors.blue.shade100,
                 child: Text(
-                  '2',
+                  (level).toString(),
                   style: TextStyle(
                     color: Colors.blue,
                     fontWeight: FontWeight.bold,
@@ -328,14 +337,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Level 2',
+                    'Level $level',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18.sp,
                     ),
                   ),
                   Text(
-                    '500 Points to next level',
+                    '$pointsToNext Points to next level',
                     style: TextStyle(color: Colors.grey, fontSize: 16.sp),
                   ),
                 ],
@@ -353,7 +362,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               FractionallySizedBox(
-                widthFactor: 5200 / 6000,
+                widthFactor: progress,
                 child: Container(
                   height: 4.h,
                   decoration: BoxDecoration(
@@ -367,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Positioned.fill(
                 child: Center(
                   child: Text(
-                    '★ 5200/6000',
+                    '★ $points/$pointsForNextLevel',
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -383,7 +392,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _medalCard(String name,
+  Widget _medalCard(
+      String name,
       Color color,
       String count,
       Color TextBg,
@@ -441,64 +451,458 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _certCard(String title,
+  Widget _certCard(
+      String title,
       String subtitle,
       Color iconColor,
       Color bgColor, {
         Key? key,
       }) {
-    return Container(
-      key: key,
-      width: 35.w,
-      height: 22.h,
-      margin: EdgeInsets.only(right: 5.w),
-      padding: EdgeInsets.symmetric(vertical: 1.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(3.5.h),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 1.h,
-            offset: Offset(0, 0.5.h),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          SvgPicture.asset(
-            'assets/images/Medallions.svg',
-            width: 0.h,
-            height: 9.h,
-          ),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
-          ),
-          SizedBox(height: 0.5.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
-            decoration: BoxDecoration(
-              color: const Color(0XFFDEE7FF),
-              borderRadius: BorderRadius.circular(1.h),
+    final bool isLocked = subtitle == 'LOCKED';
+    return Opacity(
+      opacity: isLocked ? 0.5 : 1.0,
+      child: Container(
+        key: key,
+        width: 35.w,
+        height: 22.h,
+        margin: EdgeInsets.only(right: 5.w),
+        padding: EdgeInsets.symmetric(vertical: 1.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(3.5.h),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 1.h,
+              offset: Offset(0, 0.5.h),
             ),
-            child: Text(
-              subtitle,
-              style: TextStyle(
-                color: const Color(0XFF346AD4),
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
+          ],
+        ),
+        child: Column(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/Medallions.svg',
+                  width: 0.h,
+                  height: 9.h,
+                ),
+                if (isLocked)
+                  Padding(
+                    padding: EdgeInsets.only(top: 6 .h),
+                    child: Icon(
+                      Icons.lock,
+                      size: 22.sp,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+              ],
+            ),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
+            ),
+            SizedBox(height: 0.5.h),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.5.h),
+              decoration: BoxDecoration(
+                color: isLocked
+                    ? Colors.grey.shade300
+                    : const Color(0XFFDEE7FF),
+                borderRadius: BorderRadius.circular(1.h),
+              ),
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  color: isLocked ? Colors.grey : const Color(0XFF346AD4),
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// (CustomSwitchTab, PactStatus, PactCard, PactStatusBadge, CircleProgressPainter remain unchanged below)
+// ================== Header (Avatar + Name + Settings) ==================
+class _HeaderSection extends StatelessWidget {
+  final bool loading;
+  final VoidCallback onSettingsTap;
+  const _HeaderSection({
+    required this.onSettingsTap,
+    this.loading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Column(
+          children: [
+            Container(
+              width: 14.h,
+              height: 14.h,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+            SizedBox(height: 1.5.h),
+            Container(
+              width: 30.w,
+              height: 2.2.h,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(1.h),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final userBox = Hive.box<UserModel>('userBox');
+    final user = userBox.isNotEmpty ? userBox.getAt(0) : null;
+    final userName = user?.name ?? '';
+    return Column(
+      children: [
+        SizedBox(
+          width: 14.h,
+          height: 14.h,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 14.h,
+                height: 14.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 3,
+                  ),
+                ),
+                child: const CircleAvatar(
+                  backgroundImage: AssetImage('assets/images/profile.jpg'),
+                  backgroundColor: Colors.transparent,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 1.5.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              userName,
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 2.w),
+            GestureDetector(
+              onTap: onSettingsTap,
+              child: Container(
+                padding: EdgeInsets.all(0.5.h),
+                width: 3.5.h,
+                height: 3.5.h,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDEE7FF),
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(1.h),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 0.8.h,
+                      offset: Offset(0, 0.4.h),
+                    ),
+                  ],
+                ),
+                child: SvgPicture.asset(
+                  'assets/icons/Frame.svg',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ================== Shimmer Widgets ==================
+class PactCardShimmer extends StatelessWidget {
+  const PactCardShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 1.5.h, horizontal: 5.w),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 5.w, vertical: 3.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(3.w),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _shimmerBar(width: 40.w, height: 2.2.h),
+              SizedBox(height: 1.5.h),
+              _shimmerBar(width: 30.w, height: 1.8.h),
+              SizedBox(height: 0.8.h),
+              _shimmerBar(width: 25.w, height: 1.6.h),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerBar({required double width, required double height}) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(1.h),
+      ),
+    );
+  }
+}
+
+class AchievementsShimmer extends StatelessWidget {
+  const AchievementsShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 3.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _LevelCardShimmer(),
+          SizedBox(height: 3.h),
+          _sectionTitleShimmer(),
+          SizedBox(height: 2.h),
+          Row(
+            children: List.generate(3, (i) => _MedalShimmer(i != 2)),
+          ),
+          SizedBox(height: 3.h),
+          _sectionTitleShimmer(),
+          SizedBox(height: 2.h),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(3, (i) => _CertCardShimmer(i != 2)),
+            ),
+          ),
+          SizedBox(height: 3.h),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitleShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        width: 28.w,
+        height: 2.2.h,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(1.h),
+        ),
+      ),
+    );
+  }
+}
+
+class _LevelCardShimmer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        padding: EdgeInsets.all(3.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(2.h),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 5.h,
+                  height: 5.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 2.w),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _bar(25.w, 2.2.h),
+                    SizedBox(height: 0.8.h),
+                    _bar(30.w, 1.8.h),
+                  ],
+                )
+              ],
+            ),
+            SizedBox(height: 2.h),
+            Container(
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(2.h),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bar(double w, double h) => Container(
+    width: w,
+    height: h,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(1.h),
+    ),
+  );
+}
+
+class _MedalShimmer extends StatelessWidget {
+  final bool addRight;
+  const _MedalShimmer(this.addRight);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 25.w,
+      margin: EdgeInsets.only(right: addRight ? 5.w : 0),
+      padding: EdgeInsets.only(top: 0.5.h, bottom: 1.h),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(3.5.h),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: 1.h),
+              Container(
+                width: 5.h,
+                height: 5.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(1.h),
+                ),
+              ),
+              SizedBox(height: 1.5.h),
+              Container(
+                width: 12.w,
+                height: 2.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(1.h),
+                ),
+              ),
+              SizedBox(height: 0.5.h),
+              Container(
+                width: 10.w,
+                height: 2.2.h,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(1.h),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CertCardShimmer extends StatelessWidget {
+  final bool addRight;
+  const _CertCardShimmer(this.addRight);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+        width: 35.w,
+        height: 22.h,
+        margin: EdgeInsets.only(right: addRight ? 5.w : 0),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            padding: EdgeInsets.symmetric(vertical: 1.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(3.5.h),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 12.w,
+                  height: 9.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(2.h),
+                  ),
+                ),
+                SizedBox(height: 1.h),
+                Container(
+                  width: 20.w,
+                  height: 2.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(1.h),
+                  ),
+                ),
+                SizedBox(height: 1.h),
+                Container(
+                  width: 18.w,
+                  height: 2.2.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(1.h),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        )
+        );
+    }
+}
+
+// (CustomSwitchTab, PactCardProfile, PactStatusBadge & CircleProgressPainter unchanged below except already present)
 
 class CustomSwitchTab extends StatefulWidget {
   final Function(int selectedIndex)? onTap;
@@ -563,8 +967,6 @@ class _CustomSwitchTabState extends State<CustomSwitchTab> {
     );
   }
 }
-
-
 
 class PactCardProfile extends StatelessWidget {
   final String title;
@@ -669,18 +1071,6 @@ class PactStatusBadge extends StatelessWidget {
         return Colors.green;
       case PactStatus.wasted:
         return Colors.red;
-      case PactStatus.completed:
-        // TODO: Handle this case.
-        throw UnimplementedError();
-      case PactStatus.wasted:
-        // TODO: Handle this case.
-        throw UnimplementedError();
-      case PactStatus.wasted:
-        // TODO: Handle this case.
-        throw UnimplementedError();
-      case PactStatus.wasted:
-        // TODO: Handle this case.
-        throw UnimplementedError();
     }
   }
 
@@ -730,8 +1120,7 @@ class PactStatusBadge extends StatelessWidget {
               ],
             ),
             alignment: Alignment.center,
-            child:
-            status == PactStatus.active &&
+            child: status == PactStatus.active &&
                 completedDays != null &&
                 totalDays != null
                 ? Column(

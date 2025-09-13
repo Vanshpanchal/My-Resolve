@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:myresolve/Utils/reminder_helper.dart';
 import 'package:sizer/sizer.dart';
 
 class PactDetailScreen extends StatefulWidget {
@@ -11,32 +12,29 @@ class PactDetailScreen extends StatefulWidget {
 }
 
 class _PactDetailScreenState extends State<PactDetailScreen> {
-  Duration remaining = const Duration(hours: 12, minutes: 10, seconds: 32);
-  Timer? timer;
+  final ValueNotifier<String> _reminderTimeStrNotifier = ValueNotifier('00:00:00');
+  Timer? _reminderTimer;
 
   @override
   void initState() {
     super.initState();
-    timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        remaining -= const Duration(seconds: 1);
-        if (remaining.isNegative) remaining = Duration.zero;
-      });
-    });
+    _updateReminderCountdown();
+    _reminderTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateReminderCountdown());
+  }
+
+  void _updateReminderCountdown() async {
+    final duration = await ReminderHelper.getTimeUntilNextReminder();
+    _reminderTimeStrNotifier.value = ReminderHelper.formatDuration(duration);
   }
 
   @override
+  @override
   void dispose() {
-    timer?.cancel();
+    _reminderTimer?.cancel();
+    _reminderTimeStrNotifier.dispose();
     super.dispose();
   }
-
-  String _two(int n) => n.toString().padLeft(2, '0');
-
-  String get timeStr =>
-      '${_two(remaining.inHours)} : ${_two(remaining.inMinutes % 60)} : ${_two(remaining.inSeconds % 60)}';
-
+  // Countdown card widget (copied from Dashboard/Profile for consistency)
   Widget _countdownCard(String timeStr) {
     return Container(
       padding: EdgeInsets.all(5.w),
@@ -338,13 +336,10 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                       ),
                     ),
                     SizedBox(width: 1.5.w),
-                    Positioned(
-                      right: 0,
-                      child: Icon(
-                        Icons.arrow_forward_ios,
-                        size: 15.sp,
-                        color: Colors.white,
-                      ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 15.sp,
+                      color: Colors.white,
                     ),
                   ],
                 ),
@@ -358,6 +353,9 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Get pact title from arguments (Navigator push: arguments: {'title': ...})
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final pactTitle = args != null && args['title'] != null ? args['title'] as String : 'Pact';
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
@@ -368,7 +366,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
             elevation: 0,
             centerTitle: true,
             title: Text(
-              "Fitness Pact",
+              pactTitle,
               style: TextStyle(
                 color: Colors.black,
                 fontSize: 18.sp,
@@ -387,7 +385,13 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                   child: Column(
                     children: [
                       SizedBox(height: 12.h),
-                      _countdownCard(timeStr),
+                      // Next Check-in Due widget with reminder countdown
+                      ValueListenableBuilder(
+                        valueListenable: _reminderTimeStrNotifier,
+                        builder: (context, String timeStr, _) {
+                          return _countdownCard(timeStr);
+                        },
+                      ),
                       SizedBox(height: 2.0.h),
                       _buildCheckInCard(context),
                       SizedBox(height: 2.4.h),
