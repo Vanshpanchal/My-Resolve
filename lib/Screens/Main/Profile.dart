@@ -128,7 +128,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.pushNamed(
                   context,
                   '/pactDetail',
-                  arguments: {'title': pact.name},
+                  arguments: {
+                    'title': pact.name,
+                    'pactId': pact.id?.toString() ?? '',
+                  },
                 );
               },
               child: PactCardProfile(
@@ -297,10 +300,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _levelCardCustom({required int level, required int points}) {
     int nextLevel = level + 1;
     int pointsForNextLevel = level * 1000;
-    int currentLevelPoints = level * 1000;
+    int currentLevelPoints = points;
     int pointsToNext = pointsForNextLevel - points;
     double progress =
-        (points - currentLevelPoints) /
+        (points ) /
             (pointsForNextLevel - currentLevelPoints);
     progress = progress.clamp(0.0, 1.0);
     return Container(

@@ -295,6 +295,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         statusText: pact.status == 'completed' ? 'Gained' : pact.status,
                                         completedDays: pact.daysDone,
                                         totalDays: pact.totalDays,
+                                        pactId: pact.id,
                                       );
                                     },
                                     childCount: filteredPacts.length,
@@ -474,6 +475,7 @@ class PactCardProfile extends StatelessWidget {
   final String statusText;
   final int? completedDays;
   final int? totalDays;
+  final String? pactId;
 
   const PactCardProfile({
     Key? key,
@@ -484,6 +486,7 @@ class PactCardProfile extends StatelessWidget {
     required this.statusText,
     this.completedDays,
     this.totalDays,
+    this.pactId,
   }) : super(key: key);
 
   @override
@@ -495,11 +498,14 @@ class PactCardProfile extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: () {
-              Navigator.pushNamed(
-                context,
-                '/pactDetail',
-                arguments: {'title': title},
-              );
+                Navigator.pushNamed(
+                  context,
+                  '/pactDetail',
+                  arguments: {
+                    'title': title,
+                    'pactId': pactId ?? '',
+                  },
+                );
             },
             child: Container(
               margin: EdgeInsets.only(bottom: 2.w),
@@ -552,7 +558,8 @@ class PactCardProfile extends StatelessWidget {
           ),
         ],
       ),
-    );
+                                      // pactId: pact.id,
+                                      );
   }
 }
 
