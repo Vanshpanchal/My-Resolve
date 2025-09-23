@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
 import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
@@ -46,8 +47,15 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F8FB),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        // From login screen, exit the app
+        SystemNavigator.pop();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF5F8FB),
       body: Stack(
         children: [
           SizedBox(
@@ -270,6 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -5,7 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:myresolve/Screens/Main/Create.dart';
 import 'package:myresolve/Screens/Main/Dashboard.dart';
 import 'package:myresolve/Screens/Main/Profile.dart';
+import 'package:myresolve/Screens/Main/Notification.dart';
+import 'package:myresolve/Screens/Main/Feed.dart';
 import 'package:myresolve/Utils/Colors.dart';
+import 'package:myresolve/Utils/notification_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,11 +22,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selected = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Initialize notifications when app starts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+      notificationProvider.fetchNotifications();
+    });
+  }
+
   final List<Widget> screens = [
     const DashboardScreen(),
-    Center(child: Text('Home', style: TextStyle(fontSize: 18))),
+    const FeedScreen(),
     const CreateScreen(),
-    Center(child: Text('Alerts', style: TextStyle(fontSize: 18))),
+    const NotificationScreen(),
     const ProfileScreen(),
   ];
 
@@ -37,38 +51,88 @@ class _HomeScreenState extends State<HomeScreen> {
     ));
 
     // ✅ Build bottom bar items dynamically so we can switch icons
-    final List<TabItem> items = [
-      TabItem(icon: CupertinoIcons.square_grid_2x2, title: ''),
-      TabItem(icon: CupertinoIcons.book, title: ''),
-      TabItem(
-        icon: _selected == 2
-            ? CupertinoIcons.add_circled_solid // when Create is active
-            : CupertinoIcons.add_circled, // default
-        title: '',
-      ),
-      TabItem(icon: CupertinoIcons.bell, title: ''),
-      TabItem(icon: CupertinoIcons.person, title: ''),
-    ];
+    return Consumer<NotificationProvider>(
+      builder: (context, notificationProvider, child) {
+        final List<TabItem> items = [
+          TabItem(icon: CupertinoIcons.square_grid_2x2, title: ''),
+          TabItem(icon: CupertinoIcons.doc_text, title: ''),
+          TabItem(
+            icon: _selected == 2
+                ? CupertinoIcons.add_circled_solid // when Create is active
+                : CupertinoIcons.add_circled, // default
+            title: '',
+          ),
+          TabItem(icon: CupertinoIcons.bell, title: ''),
+          TabItem(icon: CupertinoIcons.person, title: ''),
+        ];
 
     return Sizer(
       builder: (context, orientation, deviceType) {
-        return Scaffold(
-          extendBody: true, // ✅ content under bottom nav
-          backgroundColor: const Color(0xFFF5F8FB),
-          body: screens[_selected],
-          bottomNavigationBar: BottomBarCreative(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-            items: items,
-            backgroundColor: Colors.white,
-            indexSelected: _selected,
-            iconSize: 28,
-            color: Colors.grey.shade400,
-            colorSelected: AppColors.lightBlue,
-            onTap: (index) {
-              setState(() => _selected = index);
-            },
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) async {
+            if (didPop) return;
+            
+            // If we're on the dashboard (index 0), close the app
+            if (_selected == 0) {
+              SystemNavigator.pop();
+            } else {
+              // Otherwise, navigate to dashboard
+              setState(() {
+                _selected = 0;
+              });
+            }
+          },
+          child: Scaffold(
+            extendBody: true, // ✅ content under bottom nav
+            backgroundColor: const Color(0xFFF5F8FB),
+            body: screens[_selected],
+            bottomNavigationBar: Stack(
+            children: [
+              BottomBarCreative(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+                items: items,
+                backgroundColor: Colors.white,
+                indexSelected: _selected,
+                iconSize: 28,
+                color: Colors.grey.shade400,
+                colorSelected: AppColors.lightBlue,
+                onTap: (index) {
+                  setState(() => _selected = index);
+                },
+              ),
+              // Notification badge
+              if (notificationProvider.unreadCount > 0)
+                Positioned(
+                  top: 10,
+                  left: MediaQuery.of(context).size.width * 0.75 - 22, // Position over bell icon
+                  child: Container(
+                    padding: EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightBlue,
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    constraints: BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    child: Text(
+                      '${notificationProvider.unreadCount > 99 ? '99+' : notificationProvider.unreadCount}',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           ),
         );
+      },
+    );
       },
     );
   }

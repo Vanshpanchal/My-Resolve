@@ -7,6 +7,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:myresolve/Utils/reminder_helper.dart';
 import 'package:sizer/sizer.dart';
 
@@ -703,6 +704,8 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final pactTitle = args != null && args['title'] != null ? args['title'] as String : 'Pact';
     final pactId = args != null && args['pactId'] != null ? args['pactId'] as String : (_pactId ?? '');
+    final groupCode = args != null && args['groupCode'] != null ? args['groupCode'] as String : '';
+    
     return Sizer(
       builder: (context, orientation, deviceType) {
         return Scaffold(
@@ -712,13 +715,42 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
             backgroundColor: Colors.transparent,
             elevation: 0,
             centerTitle: true,
-            title: Text(
-              pactTitle,
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-              ),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  pactTitle,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (groupCode.isNotEmpty) ...[
+                  SizedBox(width: 2.w),
+                  InkWell(
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(text: groupCode));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          elevation: 0,
+                          backgroundColor: Colors.transparent,
+                          content: AwesomeSnackbarContent(
+                            title: 'Copied!',
+                            message: 'Group code copied to clipboard',
+                            contentType: ContentType.success,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      Icons.info_outline,
+                      color: Colors.black54,
+                      size: 20.sp,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           body: Stack(

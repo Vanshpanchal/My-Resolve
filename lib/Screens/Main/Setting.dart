@@ -46,8 +46,14 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Sizer(
-      builder: (ctx, orientation, deviceType) {
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        Navigator.of(context).pop();
+      },
+      child: Sizer(
+        builder: (ctx, orientation, deviceType) {
         return Scaffold(
           extendBodyBehindAppBar: true, // Lets body extend behind app bar
           appBar: AppBar(
@@ -143,7 +149,7 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       },
-    );
+    ));
   }
 }
 

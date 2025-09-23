@@ -7,5 +7,11 @@ class ApiEndpoints {
 
   // Pacts
   static const String pacts = '/api/pacts';
+  
+  // Notifications
+  static const String notifications = '/api/notifications';
+  
+  // Feed
+  static const String tipsFeed = '/api/tips-feed';
   // Add more endpoints as needed
 }

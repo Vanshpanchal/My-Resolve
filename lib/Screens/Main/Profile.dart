@@ -84,6 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
       },
+    
     );
   }
 
@@ -131,6 +132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   arguments: {
                     'title': pact.name,
                     'pactId': pact.id?.toString() ?? '',
+                    'groupCode': pact.groupCode,
                   },
                 );
               },
@@ -302,9 +304,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     int pointsForNextLevel = level * 1000;
     int currentLevelPoints = points;
     int pointsToNext = pointsForNextLevel - points;
+    // double progress = points / (pointsForNextLevel - points);
+    // progress = progress.clamp(0.0, 1.0);
+
+    int currentLevelPointsRequired = (level - 1) * 1000;
+    int nextLevelPointsRequired = level * 1000;
+
     double progress =
-        (points ) /
-            (pointsForNextLevel - currentLevelPoints);
+        (points - currentLevelPointsRequired) /
+            (nextLevelPointsRequired - currentLevelPointsRequired);
+
     progress = progress.clamp(0.0, 1.0);
     return Container(
       padding: EdgeInsets.all(3.w),

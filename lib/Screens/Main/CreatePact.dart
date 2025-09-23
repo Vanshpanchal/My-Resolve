@@ -29,11 +29,17 @@ class _CreatePactScreenState extends State<CreatePactScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Sizer(
-      builder: (context, orientation, deviceType) {
-        return Scaffold(
-          extendBodyBehindAppBar: true,
-          appBar: AppBar(
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) async {
+        if (didPop) return;
+        Navigator.of(context).pop();
+      },
+      child: Sizer(
+        builder: (context, orientation, deviceType) {
+          return Scaffold(
+            extendBodyBehindAppBar: true,
+            appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
             centerTitle: true,
@@ -258,7 +264,7 @@ class _CreatePactScreenState extends State<CreatePactScreen> {
           ),
         );
       },
-    );
+    ));
   }
 }
 

@@ -4,11 +4,15 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
 import 'package:myresolve/Screens/Main/PactDetail.dart';
+import 'package:myresolve/Screens/Main/Notification.dart';
+import 'package:myresolve/Screens/Main/Feed.dart';
 import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
 import 'package:myresolve/Screens/SplashScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:myresolve/Utils/auth_provider.dart';
 import 'package:myresolve/Utils/notification_service.dart' hide NotificationService;
+import 'package:myresolve/Utils/notification_provider.dart';
+import 'package:myresolve/Utils/feed_provider.dart';
 import 'package:myresolve/Utils/reminder_model.dart';
 import 'package:myresolve/Utils/user_model.dart' hide UserModel, UserModelAdapter;
 import 'package:provider/provider.dart';
@@ -38,6 +42,8 @@ void main() {
           ChangeNotifierProvider(create: (_) => AuthProvider()),
           ChangeNotifierProvider(create: (_) => PactProvider()),
           ChangeNotifierProvider(create: (_) => UserProfileProvider()),
+          ChangeNotifierProvider(create: (_) => NotificationProvider()),
+          ChangeNotifierProvider(create: (_) => FeedProvider()),
         ],
         child: const MyApp(),
       ),
@@ -107,6 +113,8 @@ class MyApp extends StatelessWidget {
                 '/register': (context) => const RegisterScreen(),
                 '/main': (context) => const HomeScreen(),
                 '/pactDetail': (context) => PactDetailScreen(),
+                '/notification': (context) => const NotificationScreen(),
+                '/feed': (context) => const FeedScreen(),
               },
             );
           },

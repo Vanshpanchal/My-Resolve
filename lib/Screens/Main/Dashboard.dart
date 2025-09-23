@@ -296,6 +296,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         completedDays: pact.daysDone,
                                         totalDays: pact.totalDays,
                                         pactId: pact.id,
+                                        groupCode: pact.groupCode,
                                       );
                                     },
                                     childCount: filteredPacts.length,
@@ -476,6 +477,7 @@ class PactCardProfile extends StatelessWidget {
   final int? completedDays;
   final int? totalDays;
   final String? pactId;
+  final String? groupCode;
 
   const PactCardProfile({
     Key? key,
@@ -487,6 +489,7 @@ class PactCardProfile extends StatelessWidget {
     this.completedDays,
     this.totalDays,
     this.pactId,
+    this.groupCode,
   }) : super(key: key);
 
   @override
@@ -504,6 +507,7 @@ class PactCardProfile extends StatelessWidget {
                   arguments: {
                     'title': title,
                     'pactId': pactId ?? '',
+                    'groupCode': groupCode ?? '',
                   },
                 );
             },
