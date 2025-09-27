@@ -1,4 +1,4 @@
-import 'Utils/notification_service.dart';
+import 'Utils/firebase_notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
@@ -10,7 +10,6 @@ import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
 import 'package:myresolve/Screens/SplashScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:myresolve/Utils/auth_provider.dart';
-import 'package:myresolve/Utils/notification_service.dart' hide NotificationService;
 import 'package:myresolve/Utils/notification_provider.dart';
 import 'package:myresolve/Utils/feed_provider.dart';
 import 'package:myresolve/Utils/reminder_model.dart';
@@ -34,8 +33,8 @@ void main() {
   // FlutterNativeSplash.remove();
   WidgetsFlutterBinding.ensureInitialized();
   _initHive().then((_) async {
-    // Initialize notifications
-    await NotificationService.initialize();
+    // Initialize Firebase notifications
+    await FirebaseNotificationService.initialize();
     runApp(
       MultiProvider(
         providers: [

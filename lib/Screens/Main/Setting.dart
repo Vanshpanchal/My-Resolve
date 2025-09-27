@@ -1,9 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sizer/sizer.dart';
-import 'package:myresolve/Utils/notification_service.dart';
+import 'package:myresolve/Utils/firebase_notification_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  Map<String, dynamic>? _currentReminder;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentReminder();
+  }
+
+
+  Future<void> _loadCurrentReminder() async {
+    final reminder = await FirebaseNotificationService.getCurrentReminder();
+    if (mounted) {
+      setState(() {
+        _currentReminder = reminder;
+      });
+    }
+  }
+
   Future<void> _pickReminderTime(BuildContext context) async {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
@@ -16,13 +41,15 @@ class SettingsScreen extends StatelessWidget {
               onPrimary: Colors.white, // Text on blue
               onSurface: Colors.black, // Text on white
             ),
-            dialogBackgroundColor: Colors.white,
+            dialogTheme: DialogThemeData(
+              backgroundColor: Colors.white,
+            ),
             timePickerTheme: TimePickerThemeData(
               backgroundColor: Colors.white,
-              hourMinuteColor: MaterialStateColor.resolveWith((states) => Color(0xFF1D61E7)),
-              hourMinuteTextColor: MaterialStateColor.resolveWith((states) => Colors.white),
-              dayPeriodColor: MaterialStateColor.resolveWith((states) => Color(0xFF1D61E7)),
-              dayPeriodTextColor: MaterialStateColor.resolveWith((states) => Colors.white),
+              hourMinuteColor: WidgetStateColor.resolveWith((states) => Color(0xFF1D61E7)),
+              hourMinuteTextColor: WidgetStateColor.resolveWith((states) => Colors.white),
+              dayPeriodColor: WidgetStateColor.resolveWith((states) => Color(0xFF1D61E7)),
+              dayPeriodTextColor: WidgetStateColor.resolveWith((states) => Colors.white),
               dialHandColor: Color(0xFF1D61E7),
               dialBackgroundColor: Color(0xFFE7EFFA),
               entryModeIconColor: Color(0xFF1D61E7),
@@ -35,20 +62,36 @@ class SettingsScreen extends StatelessWidget {
     if (picked != null) {
       final box = await Hive.openBox('reminderBox');
       await box.put('reminder', {'hour': picked.hour, 'minute': picked.minute});
-      // Schedule notification
-  await NotificationService.scheduleDailyReminder(picked.hour, picked.minute, context: context);
+      // Schedule Firebase notification
+      await FirebaseNotificationService.scheduleDailyReminder(picked.hour, picked.minute, context: context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Daily reminder set for ${picked.format(context)}')),
       );
     }
   }
-  const SettingsScreen({super.key});
+
+  Future<void> _cancelReminder(BuildContext context) async {
+    await FirebaseNotificationService.cancelDailyReminder(context: context);
+    await _loadCurrentReminder();
+  }
+
+  String _getReminderStatusText() {
+    if (_currentReminder == null || _currentReminder!['enabled'] != true) {
+      return 'No daily reminder set';
+    }
+    
+    final hour = _currentReminder!['hour'] ?? 0;
+    final minute = _currentReminder!['minute'] ?? 0;
+    final timeString = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    
+    return 'Daily reminder: $timeString';
+  }
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         Navigator.of(context).pop();
       },
@@ -58,7 +101,6 @@ class SettingsScreen extends StatelessWidget {
           extendBodyBehindAppBar: true, // Lets body extend behind app bar
           appBar: AppBar(
             backgroundColor: Colors.transparent,
-            // backgroundColor:,
             elevation: 0,
             centerTitle: true,
             title: Text(
@@ -100,9 +142,9 @@ class SettingsScreen extends StatelessWidget {
                           SizedBox(height: 4.h),
                           _SettingsButton(
                             icon: Icons.person_outline_rounded,
-                            label: 'Edit Picture',
+                            label: 'Edit Profile',
                             onTap: () {
-                              // TODO: Implement edit picture logic
+                              // TODO: Implement edit profile logic
                             },
                           ),
                           SizedBox(height: 2.h),
@@ -114,29 +156,215 @@ class SettingsScreen extends StatelessWidget {
                             },
                           ),
                           SizedBox(height: 2.h),
-                          _SettingsButton(
-                            icon: Icons.alarm,
-                            label: 'Daily Reminder',
-                            onTap: () => _pickReminderTime(context),
+                          // Daily Reminder Status and Controls
+                          Container(
+                            padding: EdgeInsets.all(4.w),
+                            margin: EdgeInsets.symmetric(vertical: 1.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.alarm,
+                                      color: Color(0xFF1D61E7),
+                                      size: 6.w,
+                                    ),
+                                    SizedBox(width: 3.w),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Daily Reminder',
+                                            style: TextStyle(
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          Text(
+                                            _getReminderStatusText(),
+                                            style: TextStyle(
+                                              fontSize: 12.sp,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 2.h),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => _pickReminderTime(context),
+                                        icon: Icon(
+                                          _currentReminder?['enabled'] == true 
+                                            ? Icons.edit_notifications 
+                                            : Icons.add_alarm,
+                                          size: 4.w,
+                                        ),
+                                        label: Text(
+                                          _currentReminder?['enabled'] == true 
+                                            ? 'Change Time' 
+                                            : 'Set Reminder',
+                                          style: TextStyle(fontSize: 12.sp),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color(0xFF1D61E7),
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    if (_currentReminder?['enabled'] == true) ...[
+                                      SizedBox(width: 3.w),
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () => _cancelReminder(context),
+                                          icon: Icon(Icons.alarm_off, size: 4.w),
+                                          label: Text(
+                                            'Cancel',
+                                            style: TextStyle(fontSize: 12.sp),
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.orange,
+                                            foregroundColor: Colors.white,
+                                            padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                           SizedBox(height: 2.h),
-                          _SettingsButton(
-                            icon: Icons.notifications_active,
-                            label: 'Test Notification',
-                            onTap: () async {
-                              await NotificationService.showImmediateNotification();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Test notification triggered.')),
-                              );
-                            },
-                          ),
-                          SizedBox(height: 2.h),
-                          _SettingsButton(
-                            icon: Icons.logout_rounded,
-                            label: 'Logout',
-                            onTap: () {
-                              // TODO: Implement logout logic
-                            },
+                          // Test notification button
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(4.w),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.orange.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.bug_report, color: Colors.orange, size: 5.w),
+                                    SizedBox(width: 3.w),
+                                    Text(
+                                      'Test Notifications',
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.orange.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 1.h),
+                                Text(
+                                  'Test if local notifications work on your device',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          await FirebaseNotificationService.testImmediateNotification(context: context);
+                                        },
+                                        icon: Icon(Icons.notifications_active, size: 4.w),
+                                        label: Text(
+                                          'Test Now',
+                                          style: TextStyle(fontSize: 12.sp),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.purple,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Expanded(
+                                      child: ElevatedButton.icon(
+                                        onPressed: () async {
+                                          await FirebaseNotificationService.testScheduledLocalNotification(context: context);
+                                        },
+                                        icon: Icon(Icons.schedule, size: 4.w),
+                                        label: Text(
+                                          'Test 5s',
+                                          style: TextStyle(fontSize: 12.sp),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.orange,
+                                          foregroundColor: Colors.white,
+                                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 1.h),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      await FirebaseNotificationService.requestAllPermissions(context);
+                                    },
+                                    icon: Icon(Icons.security, size: 4.w),
+                                    label: Text(
+                                      'Fix Permissions & Settings',
+                                      style: TextStyle(fontSize: 12.sp),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(vertical: 1.5.h),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           SizedBox(height: 4.h),
                         ],
@@ -267,7 +495,7 @@ class _SettingsButton extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: Colors.white.withOpacity(.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 size: 3.2.h,
               ),
             ],
