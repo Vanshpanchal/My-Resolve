@@ -22,6 +22,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   int selectedTabIndex = 1; // 1 = ACTIVITY, 0 = ACHIEVEMENTS
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProfileProvider>(context, listen: false).fetchUserProfile();
+    });
+  }
+
   void _onSettingsTap() {
     Navigator.push(
       context,
@@ -601,9 +609,29 @@ class _HeaderSection extends StatelessWidget {
                     width: 3,
                   ),
                 ),
-                child: const CircleAvatar(
-                  backgroundImage: AssetImage('assets/images/profile.jpg'),
-                  backgroundColor: Colors.transparent,
+                child: Consumer<UserProfileProvider>(
+                  builder: (context, userProfileProvider, _) {
+                    String? profilePicture = userProfileProvider.userProfile?['profilePicture'];
+                    
+                    return CircleAvatar(
+                      backgroundImage: profilePicture != null && profilePicture.isNotEmpty
+                          ? NetworkImage(profilePicture)
+                          : null,
+                      backgroundColor: Colors.grey[300],
+                      child: profilePicture == null || profilePicture.isEmpty
+                          ? Icon(
+                              Icons.person,
+                              size: 4.h,
+                              color: Colors.grey[600],
+                            )
+                          : null,
+                      onBackgroundImageError: profilePicture != null && profilePicture.isNotEmpty
+                          ? (exception, stackTrace) {
+                              debugPrint('Profile image error: $exception');
+                            }
+                          : null,
+                    );
+                  },
                 ),
               ),
             ],

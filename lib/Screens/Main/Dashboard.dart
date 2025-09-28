@@ -10,6 +10,7 @@ import 'package:myresolve/Utils/PactCardModel.dart';
 import 'package:myresolve/Utils/reminder_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:myresolve/Utils/auth_provider.dart';
+import 'package:myresolve/Utils/user_profile_provider.dart';
 import 'package:myresolve/Utils/PactFilterEnum.dart';
 import 'package:myresolve/Utils/PactStatusEnum.dart';
 import 'package:myresolve/Utils/StatsCard.dart';
@@ -44,7 +45,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final pactProvider = Provider.of<PactProvider>(context, listen: false);
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
       await pactProvider.fetchPacts();
+      await userProfileProvider.fetchUserProfile();
       if (pactProvider.error != null) {
         final snackBar = SnackBar(
           elevation: 0,
@@ -145,8 +148,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _reminderTimeStrNotifier.dispose();
       super.dispose();
     }
-    return Consumer<PactProvider>(
-      builder: (context, pactProvider, _) {
+    return Consumer2<PactProvider, UserProfileProvider>(
+      builder: (context, pactProvider, userProfileProvider, _) {
         final pactData = pactProvider.pactData;
         final loading = pactProvider.loading;
         final error = pactProvider.error;
@@ -165,7 +168,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     : CustomScrollView(
                         slivers: [
                           SliverToBoxAdapter(child: SizedBox(height: 2.2.h)),
-                          SliverToBoxAdapter(child: _header()),
+                          SliverToBoxAdapter(child: _header(userProfileProvider)),
                           SliverToBoxAdapter(child: SizedBox(height: 2.0.h)),
                           SliverToBoxAdapter(
                             child: Padding(
@@ -313,7 +316,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _header() {
+  Widget _header(UserProfileProvider userProfileProvider) {
+    final userProfile = userProfileProvider.userProfile;
+    final profilePictureUrl = userProfile?['profilePicture'];
+    final displayName = userProfile?['name'] ?? userName;
+    
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 5.w),
       child: Row(
@@ -323,10 +330,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             height: 13.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              image: const DecorationImage(
-                image: AssetImage('assets/images/profile.jpg'),
-                fit: BoxFit.cover,
-              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black12,
@@ -334,6 +337,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   offset: const Offset(0, 3),
                 ),
               ],
+            ),
+            child: CircleAvatar(
+              radius: 13.w / 2,
+              backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
+                  ? NetworkImage(profilePictureUrl) as ImageProvider
+                  : null,
+              backgroundColor: Colors.grey[300],
+              onBackgroundImageError: profilePictureUrl != null
+                  ? (exception, stackTrace) {
+                      print('Failed to load profile image: $profilePictureUrl');
+                    }
+                  : null,
+              child: profilePictureUrl == null || profilePictureUrl.isEmpty
+                  ? Icon(
+                      Icons.person,
+                      size: 6.w,
+                      color: Colors.grey[600],
+                    )
+                  : null,
             ),
           ),
           SizedBox(width: 4.w),
@@ -351,7 +373,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       const TextSpan(text: 'Hi, '),
                       TextSpan(
-                        text: userName,
+                        text: displayName,
                         style: const TextStyle(fontWeight: FontWeight.w800),
                       ),
                       TextSpan(

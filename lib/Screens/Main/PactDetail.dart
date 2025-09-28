@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:myresolve/Utils/pact_provider.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:myresolve/Utils/awesome_snackbar_helper.dart';
+import 'package:myresolve/Screens/Main/FullScreenImageViewer.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -177,16 +179,10 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
 
   Future<void> _submitCheckIn(BuildContext context, String pactId) async {
     if (_selectedImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Image Required',
-            message: 'Please select an image.',
-            contentType: ContentType.warning,
-          ),
-        ),
+      AwesomeSnackbarHelper.showWarning(
+        context,
+        'Image Required',
+        'Please select an image.',
       );
       return;
     }
@@ -199,32 +195,28 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
     );
     setState(() => _uploading = false);
     if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Success',
-            message: 'Check-in uploaded successfully!',
-            contentType: ContentType.success,
-          ),
-        ),
+      AwesomeSnackbarHelper.showSuccess(
+        context,
+        'Success',
+        'Check-in uploaded successfully!',
       );
       setState(() {
         _selectedImage = null;
         _commentController.clear();
       });
+      
+      // Refresh today's check-ins list after successful check-in
+      try {
+        await provider.fetchTodayCheckins(pactId);
+      } catch (e) {
+        // Log error but don't show it to user since check-in was successful
+        print('Error refreshing check-ins: $e');
+      }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Failed',
-            message: result['error'] ?? 'Check-in failed.',
-            contentType: ContentType.failure,
-          ),
-        ),
+      AwesomeSnackbarHelper.showError(
+        context,
+        'Failed',
+        result['error'] ?? 'Check-in failed.',
       );
     }
   }
@@ -322,7 +314,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                     if (pactId.isNotEmpty) {
                       _submitCheckIn(context, pactId);
                     } else {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pact ID missing.')));
+                      AwesomeSnackbarHelper.showError(context, 'Error', 'Pact ID missing.');
                     }
                   },
             child: Container(
@@ -563,19 +555,102 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
-                    child: mediaUrl.isNotEmpty
-                        ? Image.network(
-                            mediaUrl,
-                            fit: BoxFit.cover,
-                            height: 340,
-                            width: double.infinity,
-                          )
-                        : Image.asset(
-                            profileImage,
-                            fit: BoxFit.cover,
-                            height: 340,
-                            width: double.infinity,
-                          ),
+                    child: GestureDetector(
+                      onTap: () {
+                        // Only open full screen if there's a media URL (check-in image)
+                        if (mediaUrl.isNotEmpty) {
+                          Navigator.of(context).push(
+                            PageRouteBuilder(
+                              pageBuilder: (context, animation, secondaryAnimation) => 
+                                FullScreenImageViewer(
+                                  imageUrl: mediaUrl,
+                                  heroTag: 'checkin_image_$checkinId',
+                                  isNetworkImage: true,
+                                ),
+                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                return FadeTransition(opacity: animation, child: child);
+                              },
+                              transitionDuration: const Duration(milliseconds: 300),
+                              reverseTransitionDuration: const Duration(milliseconds: 300),
+                            ),
+                          );
+                        }
+                      },
+                      child: Hero(
+                        tag: 'checkin_image_$checkinId',
+                        child: mediaUrl.isNotEmpty
+                            ? Stack(
+                                children: [
+                                  Image.network(
+                                    mediaUrl,
+                                    fit: BoxFit.cover,
+                                    height: 340,
+                                    width: double.infinity,
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 340,
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(24),
+                                        ),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                    loadingProgress.expectedTotalBytes!
+                                                : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        height: 340,
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(24),
+                                        ),
+                                        child: const Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.error_outline, size: 48, color: Colors.grey),
+                                            SizedBox(height: 8),
+                                            Text('Failed to load image', style: TextStyle(color: Colors.grey)),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  // Overlay to indicate the image is clickable
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Icon(
+                                        Icons.fullscreen,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Image.asset(
+                                profileImage,
+                                fit: BoxFit.cover,
+                                height: 340,
+                                width: double.infinity,
+                              ),
+                      ),
+                    ),
                   ),
                 ),
                 SizedBox(height: 16),
@@ -609,17 +684,19 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                             final provider = Provider.of<PactProvider>(context, listen: false);
                             final result = await provider.verifyCheckin(checkinId: checkinId, action: 'approve');
                             Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                elevation: 0,
-                                backgroundColor: Colors.transparent,
-                                content: AwesomeSnackbarContent(
-                                  title: result['success'] == true ? 'Approved' : 'Failed',
-                                  message: result['success'] == true ? 'Check-in approved.' : (result['error'] ?? 'Failed to approve.'),
-                                  contentType: result['success'] == true ? ContentType.success : ContentType.failure,
-                                ),
-                              ),
-                            );
+                            if (result['success'] == true) {
+                              AwesomeSnackbarHelper.showSuccess(
+                                context,
+                                'Approved',
+                                'Check-in approved.',
+                              );
+                            } else {
+                              AwesomeSnackbarHelper.showError(
+                                context,
+                                'Failed',
+                                result['error'] ?? 'Failed to approve.',
+                              );
+                            }
                             // Refresh check-ins
                             final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
                             final pactId = args != null && args['pactId'] != null ? args['pactId'] as String : '';
@@ -677,7 +754,9 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xFF2563FF),
                             shape: RoundedRectangleBorder(
@@ -798,6 +877,9 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                               final comment = checkin['comment'] ?? '';
                               final mediaUrl = checkin['mediaUrl'] ?? '';
                               final verified = (checkin['verifiedBy'] as List?)?.isNotEmpty == true;
+                              // Use default profile image - no profile pictures in pact detail
+                              final profileImage = 'assets/images/default_profile.jpg';
+                              final isNetworkImage = false;
                               Color statusColor;
                               Color actionColor;
                               String actionText;
@@ -814,8 +896,6 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                                 actionColor = Color(0xFF42D393);
                                 actionText = 'Active';
                               }
-                              // Use default profile if no mediaUrl
-                              final profileImage = 'assets/images/default_profile.jpg';
                               return _buildMemberTile(
                                 name: name,
                                 status: status,

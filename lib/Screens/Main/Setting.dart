@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:sizer/sizer.dart';
+import 'package:provider/provider.dart';
 import 'package:myresolve/Utils/firebase_notification_service.dart';
+import 'package:myresolve/Utils/user_profile_provider.dart';
+import 'package:myresolve/Utils/auth_provider.dart';
+import 'package:myresolve/Utils/user_model.dart';
+import 'package:myresolve/Utils/awesome_snackbar_helper.dart';
+import 'package:myresolve/Screens/Authentication/SetNewPasswordScreen.dart';
+import 'package:myresolve/Screens/Authentication/Login.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +24,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadCurrentReminder();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<UserProfileProvider>(context, listen: false).fetchUserProfile();
+    });
   }
 
 
@@ -87,6 +97,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return 'Daily reminder: $timeString';
   }
 
+  Future<void> _logout() async {
+    try {
+      // Show confirmation dialog
+      final shouldLogout = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          title: Text(
+            'Logout',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800],
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(
+              fontSize: 16,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+              ),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1D61E7),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Logout'),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldLogout != true) return;
+
+      // Clear user data from Hive
+      final userBox = Hive.box<UserModel>('userBox');
+      await userBox.clear();
+      
+      // Call auth provider logout
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.logout();
+      
+      if (mounted) {
+        // Navigate to login screen and remove all previous routes
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+        
+        AwesomeSnackbarHelper.showSuccess(
+          context,
+          'Logged Out',
+          'You have been successfully logged out.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AwesomeSnackbarHelper.showError(
+          context,
+          'Logout Failed',
+          'Failed to logout. Please try again.',
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -129,243 +218,147 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 6.5.h,
-                            backgroundColor: Colors.white,
-                            child: CircleAvatar(
-                              radius: 6.h,
-                              backgroundImage: const AssetImage(
-                                'assets/images/profile.jpg',
-                              ),
-                            ),
+                          Consumer<UserProfileProvider>(
+                            builder: (context, userProfileProvider, _) {
+                              String? profilePicture = userProfileProvider.userProfile?['profilePicture'];
+                              
+                              return Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 6.5.h,
+                                    backgroundColor: Colors.white,
+                                    child: CircleAvatar(
+                                      radius: 6.h,
+                                      backgroundImage: profilePicture != null && profilePicture.isNotEmpty
+                                          ? NetworkImage(profilePicture)
+                                          : null,
+                                      backgroundColor: Colors.grey[300],
+                                      onBackgroundImageError: profilePicture != null && profilePicture.isNotEmpty
+                                          ? (exception, stackTrace) {
+                                              debugPrint('Profile image error: $exception');
+                                            }
+                                          : null,
+                                      child: profilePicture == null || profilePicture.isEmpty
+                                          ? Icon(
+                                              Icons.person,
+                                              size: 4.h,
+                                              color: Colors.grey[600],
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: GestureDetector(
+                                      onTap: () async {
+                                        final success = await userProfileProvider.selectAndUploadProfilePicture();
+                                        if (success && mounted) {
+                                          AwesomeSnackbarHelper.showSuccess(
+                                            context,
+                                            'Success!',
+                                            'Profile picture updated successfully!',
+                                          );
+                                        } else if (!success && mounted) {
+                                          AwesomeSnackbarHelper.showError(
+                                            context,
+                                            'Upload Failed',
+                                            userProfileProvider.error ?? 'Failed to update profile picture',
+                                          );
+                                        }
+                                      },
+                                      child: Container(
+                                        padding: EdgeInsets.all(1.h),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF1D61E7),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: userProfileProvider.uploading
+                                            ? SizedBox(
+                                                width: 2.h,
+                                                height: 2.h,
+                                                child: const CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.camera_alt,
+                                                color: Colors.white,
+                                                size: 2.h,
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           SizedBox(height: 4.h),
-                          _SettingsButton(
-                            icon: Icons.person_outline_rounded,
-                            label: 'Edit Profile',
-                            onTap: () {
-                              // TODO: Implement edit profile logic
+                          // _SettingsButton(
+                          //   icon: Icons.person_outline_rounded,
+                          //   label: 'Edit Profile',
+                          //   onTap: () {
+                          //     // TODO: Implement edit profile logic
+                          //   },
+                          // ),
+                          // SizedBox(height: 2.h),
+                          Consumer<UserProfileProvider>(
+                            builder: (context, userProfileProvider, _) {
+                              return _SettingsButton(
+                                icon: Icons.photo_camera_outlined,
+                                label: 'Update Profile Picture',
+                                onTap: () async {
+                                  final success = await userProfileProvider.selectAndUploadProfilePicture();
+                                  if (success && mounted) {
+                                    AwesomeSnackbarHelper.showSuccess(
+                                      context,
+                                      'Success!',
+                                      'Profile picture updated successfully!',
+                                    );
+                                  } else if (!success && mounted) {
+                                    AwesomeSnackbarHelper.showError(
+                                      context,
+                                      'Upload Failed',
+                                      userProfileProvider.error ?? 'Failed to update profile picture',
+                                    );
+                                  }
+                                },
+                                loading: userProfileProvider.uploading,
+                              );
                             },
                           ),
                           SizedBox(height: 2.h),
                           _SettingsButton(
                             icon: Icons.lock_outline_rounded,
-                            label: 'Forgot Password',
+                            label: 'Change Password',
                             onTap: () {
-                              // TODO: Implement forgot password logic
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SetNewPasswordScreen(),
+                                ),
+                              );
                             },
                           ),
                           SizedBox(height: 2.h),
-                          // Daily Reminder Status and Controls
-                          Container(
-                            padding: EdgeInsets.all(4.w),
-                            margin: EdgeInsets.symmetric(vertical: 1.h),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 5),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.alarm,
-                                      color: Color(0xFF1D61E7),
-                                      size: 6.w,
-                                    ),
-                                    SizedBox(width: 3.w),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Daily Reminder',
-                                            style: TextStyle(
-                                              fontSize: 16.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                          Text(
-                                            _getReminderStatusText(),
-                                            style: TextStyle(
-                                              fontSize: 12.sp,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 2.h),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _pickReminderTime(context),
-                                        icon: Icon(
-                                          _currentReminder?['enabled'] == true 
-                                            ? Icons.edit_notifications 
-                                            : Icons.add_alarm,
-                                          size: 4.w,
-                                        ),
-                                        label: Text(
-                                          _currentReminder?['enabled'] == true 
-                                            ? 'Change Time' 
-                                            : 'Set Reminder',
-                                          style: TextStyle(fontSize: 12.sp),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Color(0xFF1D61E7),
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    if (_currentReminder?['enabled'] == true) ...[
-                                      SizedBox(width: 3.w),
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          onPressed: () => _cancelReminder(context),
-                                          icon: Icon(Icons.alarm_off, size: 4.w),
-                                          label: Text(
-                                            'Cancel',
-                                            style: TextStyle(fontSize: 12.sp),
-                                          ),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.orange,
-                                            foregroundColor: Colors.white,
-                                            padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
+                          _SettingsButton(
+                            icon: Icons.alarm_outlined,
+                            label: 'Daily Reminder',
+                            onTap: () => _pickReminderTime(context),
                           ),
                           SizedBox(height: 2.h),
-                          // Test notification button
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.all(4.w),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.orange.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.bug_report, color: Colors.orange, size: 5.w),
-                                    SizedBox(width: 3.w),
-                                    Text(
-                                      'Test Notifications',
-                                      style: TextStyle(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange.shade800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 1.h),
-                                Text(
-                                  'Test if local notifications work on your device',
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                SizedBox(height: 2.h),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: () async {
-                                          await FirebaseNotificationService.testImmediateNotification(context: context);
-                                        },
-                                        icon: Icon(Icons.notifications_active, size: 4.w),
-                                        label: Text(
-                                          'Test Now',
-                                          style: TextStyle(fontSize: 12.sp),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.purple,
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 2.w),
-                                    Expanded(
-                                      child: ElevatedButton.icon(
-                                        onPressed: () async {
-                                          await FirebaseNotificationService.testScheduledLocalNotification(context: context);
-                                        },
-                                        icon: Icon(Icons.schedule, size: 4.w),
-                                        label: Text(
-                                          'Test 5s',
-                                          style: TextStyle(fontSize: 12.sp),
-                                        ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.orange,
-                                          foregroundColor: Colors.white,
-                                          padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 1.h),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await FirebaseNotificationService.requestAllPermissions(context);
-                                    },
-                                    icon: Icon(Icons.security, size: 4.w),
-                                    label: Text(
-                                      'Fix Permissions & Settings',
-                                      style: TextStyle(fontSize: 12.sp),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.symmetric(vertical: 1.5.h),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          _SettingsButton(
+                            icon: Icons.logout_outlined,
+                            label: 'Logout',
+                            onTap: _logout,
                           ),
+                          SizedBox(height: 2.h),
+
                           SizedBox(height: 4.h),
                         ],
                       ),
@@ -441,11 +434,13 @@ class _SettingsButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool loading;
 
   const _SettingsButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.loading = false,
   });
 
   @override
@@ -493,11 +488,20 @@ class _SettingsButton extends StatelessWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Colors.white.withValues(alpha: 0.9),
-                size: 3.2.h,
-              ),
+              loading
+                  ? SizedBox(
+                      width: 3.2.h,
+                      height: 3.2.h,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(
+                      Icons.chevron_right_rounded,
+                      color: Colors.white.withValues(alpha: 0.9),
+                      size: 3.2.h,
+                    ),
             ],
           ),
         ),
