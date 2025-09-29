@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:myresolve/Screens/Main/Setting.dart';
 import 'package:myresolve/Utils/Colors.dart';
+import 'package:myresolve/Utils/PactCardModel.dart';
 import 'package:myresolve/Utils/PactStatusEnum.dart';
 import 'package:myresolve/Utils/pact_provider.dart';
 import 'package:myresolve/Utils/user_model.dart';
@@ -21,13 +22,26 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   int selectedTabIndex = 1; // 1 = ACTIVITY, 0 = ACHIEVEMENTS
+  bool _initialLoadDone = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserProfileProvider>(context, listen: false).fetchUserProfile();
-    });
+    // Only load data once on first initialization
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Use regular fetch for initial load to benefit from caching
+        final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+        userProfileProvider.fetchUserProfile(); // No forceRefresh for initial load
+      });
+    }
+  }
+
+  // Centralized refresh method for pull-to-refresh and initial load
+  Future<void> _refreshData() async {
+    final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+    await userProfileProvider.fetchUserProfile(forceRefresh: true); // Force refresh on pull-to-refresh
   }
 
   void _onSettingsTap() {
@@ -50,8 +64,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: Image.asset('assets/images/Blur.png', fit: BoxFit.cover),
               ),
               SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
+                child: RefreshIndicator(
+                  onRefresh: _refreshData,
+                  color: const Color(0xFF1D61E7),
+                  backgroundColor: Colors.white,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
                     children: [
                       Padding(
                         padding: EdgeInsets.symmetric(vertical: 8.h),
@@ -88,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
-            ],
+              )],
           ),
         );
       },
@@ -121,9 +140,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           );
         }
 
+        // Sort pacts: Active → Completed → Failed
+        final sortedPacts = List<PactApiModel>.from(pacts);
+        sortedPacts.sort((a, b) {
+          int getPriority(String status) {
+            String normalizedStatus = status.toLowerCase();
+            switch (normalizedStatus) {
+              case 'active':
+                return 1;
+              case 'completed':
+                return 2;
+              case 'failed':
+              case 'wasted':
+                return 3;
+              default:
+                return 4;
+            }
+          }
+          
+          return getPriority(a.status).compareTo(getPriority(b.status));
+        });
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: pacts.map((pact) {
+          children: sortedPacts.map((pact) {
             final status = pact.status == 'active'
                 ? PactStatus.active
                 : pact.status == 'completed'
@@ -1182,7 +1222,7 @@ class PactStatusBadge extends StatelessWidget {
             )
                 : Center(
               child: Text(
-                statusText,
+                statusText[0].toUpperCase()+statusText.substring(1).toLowerCase(),  
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,

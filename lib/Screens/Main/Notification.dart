@@ -15,14 +15,26 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  bool _initialLoadDone = false;
+
   @override
   void initState() {
     super.initState();
-    // Fetch notifications from API when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<NotificationProvider>(context, listen: false);
-      provider.fetchNotifications();
-    });
+    // Only fetch data once on first load
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Use regular fetch for initial load to benefit from caching
+        final provider = Provider.of<NotificationProvider>(context, listen: false);
+        provider.fetchNotifications();
+      });
+    }
+  }
+
+  // Centralized refresh method for pull-to-refresh
+  Future<void> _refreshData() async {
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    await notificationProvider.fetchNotifications(forceRefresh: true); // Force refresh on pull-to-refresh
   }
 
   @override
@@ -86,7 +98,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   ),
                   SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => provider.fetchNotifications(),
+                    onPressed: () => provider.fetchNotifications(forceRefresh: true),
                     child: Text('Retry'),
                   ),
                 ],
@@ -96,7 +108,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
           if (provider.notifications.isEmpty) {
             return RefreshIndicator(
-              onRefresh: () => provider.fetchNotifications(),
+              onRefresh: _refreshData,
+              color: const Color(0xFF1D61E7),
+              backgroundColor: Colors.white,
               child: SingleChildScrollView(
                 physics: AlwaysScrollableScrollPhysics(),
                 child: Container(
@@ -120,7 +134,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         ),
                         SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () => provider.fetchNotifications(),
+                          onPressed: () => provider.fetchNotifications(forceRefresh: true),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.mainColor,
                           ),
@@ -138,7 +152,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => provider.fetchNotifications(),
+            onRefresh: _refreshData,
+            color: const Color(0xFF1D61E7),
+            backgroundColor: Colors.white,
             child: ListView.builder(
               padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 2.h),
               itemCount: provider.notifications.length,
@@ -175,11 +191,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       ],
                     ),
                   ),
-                  confirmDismiss: (direction) async {
-                    // Mark as read first
+                  onDismissed: (direction) {
+                    // Mark as read and show confirmation snackbar
                     provider.markAsRead(notification.id);
                     
-                    // Show confirmation snackbar
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         elevation: 0,
@@ -191,8 +206,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         ),
                       ),
                     );
-                    
-                    return true; // Allow dismissal (removes from UI)
                   },
                   child: _buildNotificationCard(notification, provider),
                 );

@@ -9,6 +9,8 @@ import 'package:myresolve/Utils/user_model.dart';
 import 'package:myresolve/Utils/awesome_snackbar_helper.dart';
 import 'package:myresolve/Screens/Authentication/SetNewPasswordScreen.dart';
 import 'package:myresolve/Screens/Authentication/Login.dart';
+import 'package:myresolve/Utils/pact_provider.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -353,6 +355,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           SizedBox(height: 2.h),
                           _SettingsButton(
+                            icon: Icons.psychology_outlined,
+                            label: 'Setup Gemini API Key',
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => GeminiApiKeyDialog(),
+                              );
+                            },
+                          ),
+                          SizedBox(height: 2.h),
+                          _SettingsButton(
                             icon: Icons.logout_outlined,
                             label: 'Logout',
                             onTap: _logout,
@@ -425,6 +438,208 @@ class _Header extends StatelessWidget {
           ),
           SizedBox(width: 4.w), // spacer to balance back button
         ],
+      ),
+    );
+  }
+}
+
+class GeminiApiKeyDialog extends StatefulWidget {
+  @override
+  State<GeminiApiKeyDialog> createState() => _GeminiApiKeyDialogState();
+}
+
+class _GeminiApiKeyDialogState extends State<GeminiApiKeyDialog> {
+  final TextEditingController _controller = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: size.width * 0.07,
+        vertical: size.height * 0.05,
+      ),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 500,
+            maxHeight: size.height * 0.8,
+          ),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: size.width * 0.06,
+              vertical: size.height * 0.03,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Align(
+                  alignment: Alignment.topRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Icon(
+                      Icons.close,
+                      size: size.width * 0.06,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(height: size.height * 0.02),
+                        Icon(
+                          Icons.psychology,
+                          size: size.width * 0.15,
+                          color: Color(0xFF3B73FF),
+                        ),
+                        SizedBox(height: size.height * 0.02),
+                        Text(
+                          "Setup Gemini API Key",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: size.width * 0.055,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(height: size.height * 0.01),
+                        Text(
+                          "Enter your Gemini API key to enable\nAI-powered check-in verification.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: size.width * 0.04,
+                          ),
+                        ),
+                        SizedBox(height: size.height * 0.02),
+                        TextField(
+                          controller: _controller,
+                          decoration: InputDecoration(
+                            hintText: "Enter your Gemini API Key",
+                            hintStyle: TextStyle(
+                              color: Colors.grey[400],
+                              fontSize: size.width * 0.04,
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: size.width * 0.04,
+                              vertical: size.height * 0.018,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: Color(0xFF3B73FF)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(color: Color(0xFF3B73FF)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide(
+                                color: Color(0xFF3B73FF),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: size.height * 0.03),
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Text(
+                              _error!,
+                              style: TextStyle(color: Colors.red, fontSize: 14),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF3B73FF),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                vertical: size.height * 0.018,
+                              ),
+                              elevation: 2,
+                            ),
+                            onPressed: _loading
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      _loading = true;
+                                      _error = null;
+                                    });
+                                    String apiKey = _controller.text.trim();
+                                    if (apiKey.isEmpty) {
+                                      setState(() {
+                                        _error = 'Please enter your Gemini API key.';
+                                        _loading = false;
+                                      });
+                                      return;
+                                    }
+                                    final pactProvider = Provider.of<PactProvider>(context, listen: false);
+                                    final result = await pactProvider.setGeminiApiKey(geminiApiKey: apiKey);
+                                    if (result['success']) {
+                                      if (mounted) {
+                                        Navigator.of(context).pop();
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            elevation: 0,
+                                            backgroundColor: Colors.transparent,
+                                            content: AwesomeSnackbarContent(
+                                              title: 'Success!',
+                                              message: 'Gemini API key has been set successfully!',
+                                              contentType: ContentType.success,
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else {
+                                      setState(() {
+                                        _error = result['error'] ?? 'Failed to set API key.';
+                                        _loading = false;
+                                      });
+                                    }
+                                  },
+                            child: _loading
+                                ? SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    'Set API Key',
+                                    style: TextStyle(
+                                      fontSize: size.width * 0.045,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

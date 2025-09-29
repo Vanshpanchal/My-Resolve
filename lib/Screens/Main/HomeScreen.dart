@@ -21,15 +21,23 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selected = 0;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _selected);
     // Initialize notifications when app starts
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
       notificationProvider.fetchNotifications();
     });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   final List<Widget> screens = [
@@ -81,12 +89,21 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 _selected = 0;
               });
+              _pageController.jumpToPage(0);
             }
           },
           child: Scaffold(
             extendBody: true, // ✅ content under bottom nav
             backgroundColor: const Color(0xFFF5F8FB),
-            body: screens[_selected],
+            body: PageView(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _selected = index;
+                });
+              },
+              children: screens,
+            ),
             bottomNavigationBar: Stack(
             children: [
               BottomBarCreative(
@@ -99,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 colorSelected: AppColors.lightBlue,
                 onTap: (index) {
                   setState(() => _selected = index);
+                  _pageController.jumpToPage(index);
                 },
               ),
               // Notification badge

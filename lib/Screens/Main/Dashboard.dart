@@ -39,30 +39,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // If you also have a "target / total" days count, replace the hard‑coded
   // totalDays logic below with the real field.
   // Remove hardcoded pacts, use provider
+  // Initial data loading flag to prevent unnecessary fetches
+  bool _initialLoadDone = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final pactProvider = Provider.of<PactProvider>(context, listen: false);
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
-      await pactProvider.fetchPacts();
-      await userProfileProvider.fetchUserProfile();
-      if (pactProvider.error != null) {
+    // Only fetch data once on first load, not on every rebuild
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        // Use regular fetch for initial load to benefit from caching
+        final pactProvider = Provider.of<PactProvider>(context, listen: false);
+        final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+        await Future.wait([
+          pactProvider.fetchPacts(), // No forceRefresh for initial load
+          userProfileProvider.fetchUserProfile(),
+        ]);
+      });
+    }
+  }
+
+  // Centralized refresh method for pull-to-refresh and initial load
+  Future<void> _refreshData() async {
+    final pactProvider = Provider.of<PactProvider>(context, listen: false);
+    final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
+    
+    try {
+      await Future.wait([
+        pactProvider.fetchPacts(forceRefresh: true), // Force refresh on pull-to-refresh
+        userProfileProvider.fetchUserProfile(forceRefresh: true),
+      ]);
+      
+      if (pactProvider.error != null && mounted) {
         final snackBar = SnackBar(
           elevation: 0,
           backgroundColor: Colors.transparent,
           content: AwesomeSnackbarContent(
             title: 'Error',
             message: pactProvider.error!,
-            contentType: ContentType.failure));
-            // Show daily reminder countdown if set, else fallback to old timer
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        }
+            contentType: ContentType.failure,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        final snackBar = SnackBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Error',
+            message: 'Failed to refresh data',
+            contentType: ContentType.failure,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    }
   }
 
   @override
@@ -94,17 +128,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 
   List<PactApiModel> getFilteredPacts(List<PactApiModel> pacts) {
+    List<PactApiModel> filtered;
+    
     switch (currentFilter) {
       case PactFilter.active:
-        return pacts.where((p) => _capitalize(p.status) == 'Active').toList();
+        filtered = pacts.where((p) => _capitalize(p.status) == 'Active').toList();
+        break;
       case PactFilter.failed:
-        return pacts.where((p) => _capitalize(p.status) == 'Failed').toList();
+        filtered = pacts.where((p) => _capitalize(p.status) == 'Failed').toList();
+        break;
       case PactFilter.completed:
-        return pacts.where((p) => _capitalize(p.status) == 'Completed').toList();
+        filtered = pacts.where((p) => _capitalize(p.status) == 'Completed').toList();
+        break;
       case PactFilter.all:
       default:
-        return pacts;
+        filtered = List<PactApiModel>.from(pacts);
+        break;
     }
+    
+    // Sort pacts: Active → Completed → Failed
+    filtered.sort((a, b) {
+      int getPriority(String status) {
+        String normalizedStatus = _capitalize(status);
+        switch (normalizedStatus) {
+          case 'Active':
+            return 1;
+          case 'Completed':
+            return 2;
+          case 'Failed':
+          case 'Wasted':
+            return 3;
+          default:
+            return 4;
+        }
+      }
+      
+      return getPriority(a.status).compareTo(getPriority(b.status));
+    });
+    
+    return filtered;
   }
 
   String _two(int n) => n.toString().padLeft(2, '0');
@@ -165,8 +227,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               SafeArea(
                 child: error != null
                     ? Center(child: Text(error))
-                    : CustomScrollView(
-                        slivers: [
+                    : RefreshIndicator(
+                        onRefresh: _refreshData,
+                        color: const Color(0xFF1D61E7),
+                        backgroundColor: Colors.white,
+                        child: CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          slivers: [
                           SliverToBoxAdapter(child: SizedBox(height: 2.2.h)),
                           SliverToBoxAdapter(child: _header(userProfileProvider)),
                           SliverToBoxAdapter(child: SizedBox(height: 2.0.h)),
@@ -309,7 +376,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ],
                       ),
               ),
-            ],
+              )],
           ),
         );
       },

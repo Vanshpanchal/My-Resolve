@@ -14,13 +14,25 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  bool _initialLoadDone = false;
+
   @override
   void initState() {
     super.initState();
-    // Fetch feed data when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<FeedProvider>(context, listen: false).fetchFeed();
-    });
+    // Only fetch data once on first load
+    if (!_initialLoadDone) {
+      _initialLoadDone = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Use regular fetch for initial load to benefit from caching
+        Provider.of<FeedProvider>(context, listen: false).fetchFeed();
+      });
+    }
+  }
+
+  // Centralized refresh method for pull-to-refresh
+  Future<void> _refreshData() async {
+    final feedProvider = Provider.of<FeedProvider>(context, listen: false);
+    await feedProvider.fetchFeed(forceRefresh: true); // Force refresh on pull-to-refresh
   }
 
   @override
@@ -122,10 +134,12 @@ class _FeedScreenState extends State<FeedScreen> {
                               );
                             }
                             
-                            return ListView.builder(
-                              physics: const BouncingScrollPhysics(
-                                parent: AlwaysScrollableScrollPhysics(),
-                              ),
+                            return RefreshIndicator(
+                              onRefresh: _refreshData,
+                              color: const Color(0xFF1D61E7),
+                              backgroundColor: Colors.white,
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
                               itemCount: feedProvider.feedItems.length,
                               itemBuilder: (context, index) {
                                 final item = feedProvider.feedItems[index];
@@ -134,7 +148,7 @@ class _FeedScreenState extends State<FeedScreen> {
                               addAutomaticKeepAlives: false,
                               addRepaintBoundaries: true,
                               addSemanticIndexes: false,
-                              cacheExtent: 500.0,
+                              cacheExtent: 500.0,                              ),
                             );
                           },
                         ),

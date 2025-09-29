@@ -143,6 +143,8 @@ class PactProvider with ChangeNotifier {
         return {'success': true, 'data': response.body};
       } else {
         final body = jsonDecode(response.body);
+        print(response.body);
+        print(response.statusCode);
         _error = body['message'] ?? 'Failed to verify check-in';
         String? err = _error;
         _error = null;
@@ -161,10 +163,18 @@ class PactProvider with ChangeNotifier {
   PactApiResponse? _pactData;
   bool _loading = false;
   String? _error;
+  DateTime? _lastFetchTime;
+  static const Duration _cacheValidDuration = Duration(minutes: 5); // Cache valid for 5 minutes
 
   PactApiResponse? get pactData => _pactData;
   bool get loading => _loading;
   String? get error => _error;
+  
+  // Check if cached data is still valid
+  bool get _isCacheValid {
+    if (_lastFetchTime == null || _pactData == null) return false;
+    return DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration;
+  }
 
   // Today check-ins state
   List<dynamic>? _todayCheckins;
@@ -177,7 +187,12 @@ class PactProvider with ChangeNotifier {
 
   static const _storage = FlutterSecureStorage();
 
-  Future<void> fetchPacts() async {
+  Future<void> fetchPacts({bool forceRefresh = false}) async {
+    // If cache is valid and not forcing refresh, return early
+    if (!forceRefresh && _isCacheValid) {
+      return;
+    }
+    
     _loading = true;
     _error = null;
     notifyListeners();
@@ -191,6 +206,7 @@ class PactProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = PactApiResponse.fromJson(jsonDecode(response.body));
         _pactData = data;
+        _lastFetchTime = DateTime.now(); // Update cache timestamp
         _error = null; // Clear error on success
         print(_pactData?.pacts[1].daysDone);
       } else {
@@ -225,5 +241,87 @@ class PactProvider with ChangeNotifier {
     }
     _todayCheckinsLoading = false;
     notifyListeners();
+  }
+
+  // Auto-verify check-in using Gemini AI
+  Future<Map<String, dynamic>> autoVerifyCheckin({required String checkinId}) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      final token = await _storage.read(key: 'token');
+      final url = Uri.parse(ApiEndpoints.baseUrl + '/api/checkins/auto-verify/$checkinId');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      print(response.body);
+      print(response.statusCode);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data};
+      } else {
+        final body = jsonDecode(response.body);
+        _error = body['message'] ?? 'Failed to auto-verify check-in';
+        String? err = _error;
+        _error = null;
+        notifyListeners();
+        return {'success': false, 'error': err};
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return {'success': false, 'error': _error};
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
+  }
+
+  // Set Gemini API key
+  Future<Map<String, dynamic>> setGeminiApiKey({required String geminiApiKey}) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      final token = await _storage.read(key: 'token');
+      final url = Uri.parse(ApiEndpoints.baseUrl + '/api/userGeminiKey/set-gemini-key');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'geminiApiKey': geminiApiKey,
+        }),
+      );
+      
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data};
+      } else {
+        final body = jsonDecode(response.body);
+        _error = body['message'] ?? 'Failed to set Gemini API key';
+        String? err = _error;
+        _error = null;
+        notifyListeners();
+        return {'success': false, 'error': err};
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return {'success': false, 'error': _error};
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 }

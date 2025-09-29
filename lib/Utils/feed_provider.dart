@@ -38,12 +38,25 @@ class FeedProvider with ChangeNotifier {
   bool _isLoading = false;
   String _error = '';
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  DateTime? _lastFetchTime;
+  static const Duration _cacheValidDuration = Duration(minutes: 10); // Cache valid for 10 minutes
 
   List<FeedModel> get feedItems => _feedItems;
   bool get isLoading => _isLoading;
   String get error => _error;
+  
+  // Check if cached data is still valid
+  bool get _isCacheValid {
+    if (_lastFetchTime == null || _feedItems.isEmpty) return false;
+    return DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration;
+  }
 
-  Future<void> fetchFeed() async {
+  Future<void> fetchFeed({bool forceRefresh = false}) async {
+    // If cache is valid and not forcing refresh, return early
+    if (!forceRefresh && _isCacheValid) {
+      return;
+    }
+    
     _isLoading = true;
     _error = '';
     notifyListeners();
@@ -95,7 +108,7 @@ class FeedProvider with ChangeNotifier {
         
         if (feedData.isNotEmpty) {
           _feedItems = feedData.map((item) => FeedModel.fromJson(item)).toList();
-          print('Successfully loaded ${_feedItems.length} feed items');
+          _lastFetchTime = DateTime.now(); // Update cache timestamp\n          print('Successfully loaded ${_feedItems.length} feed items');
         } else if (_error.isEmpty) {
           _error = 'No feed items available';
         }

@@ -14,8 +14,21 @@ class UserProfileProvider with ChangeNotifier {
   bool uploading = false;
   String? error;
   Map<String, dynamic>? userProfile;
+  DateTime? _lastFetchTime;
+  static const Duration _cacheValidDuration = Duration(minutes: 10); // Cache valid for 10 minutes
+  
+  // Check if cached data is still valid
+  bool get _isCacheValid {
+    if (_lastFetchTime == null || userProfile == null) return false;
+    return DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration;
+  }
 
-  Future<void> fetchUserProfile() async {
+  Future<void> fetchUserProfile({bool forceRefresh = false}) async {
+    // If cache is valid and not forcing refresh, return early
+    if (!forceRefresh && _isCacheValid) {
+      return;
+    }
+    
     loading = true;
     error = null;
     notifyListeners();
@@ -28,6 +41,7 @@ class UserProfileProvider with ChangeNotifier {
       });
       if (response.statusCode == 200) {
         userProfile = jsonDecode(response.body);
+        _lastFetchTime = DateTime.now(); // Update cache timestamp
         print(userProfile);
         error = null;
       } else {

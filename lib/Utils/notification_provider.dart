@@ -10,11 +10,19 @@ class NotificationProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
   final _storage = const FlutterSecureStorage();
+  DateTime? _lastFetchTime;
+  static const Duration _cacheValidDuration = Duration(minutes: 5); // Cache valid for 5 minutes
 
   List<NotificationItem> get notifications => _notifications;
   List<NotificationItem> get allNotifications => _notifications;
   bool get isLoading => _isLoading;
   String? get error => _error;
+  
+  // Check if cached data is still valid
+  bool get _isCacheValid {
+    if (_lastFetchTime == null || _notifications.isEmpty) return false;
+    return DateTime.now().difference(_lastFetchTime!) < _cacheValidDuration;
+  }
 
   // Initialize with sample data (replace with API call)
   void initializeNotifications() {
@@ -164,7 +172,12 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   // Fetch notifications from API
-  Future<void> fetchNotifications() async {
+  Future<void> fetchNotifications({bool forceRefresh = false}) async {
+    // If cache is valid and not forcing refresh, return early
+    if (!forceRefresh && _isCacheValid) {
+      return;
+    }
+    
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -193,6 +206,7 @@ class NotificationProvider extends ChangeNotifier {
           return _parseNotificationFromApi(notificationJson);
         }).toList();
         
+        _lastFetchTime = DateTime.now(); // Update cache timestamp
         _error = null;
       } else {
         throw Exception('Failed to load notifications: ${response.statusCode}');

@@ -27,6 +27,12 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
   final ValueNotifier<String> _reminderTimeStrNotifier = ValueNotifier('00:00:00');
   Timer? _reminderTimer;
   String? _pactId;
+  bool _initialLoadDone = false;
+  
+  // Loading states for verification buttons
+  bool _acceptLoading = false;
+  bool _declineLoading = false;
+  bool _geminiLoading = false;
 
   @override
   void initState() {
@@ -37,10 +43,30 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
       final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
       final pactId = args != null && args['pactId'] != null ? args['pactId'] as String : '';
       _pactId = pactId;
-      if (pactId.isNotEmpty) {
+      if (pactId.isNotEmpty && !_initialLoadDone) {
+        _initialLoadDone = true;
+        // Always fetch fresh data when pact detail is viewed
         Provider.of<PactProvider>(context, listen: false).fetchTodayCheckins(pactId);
       }
     });
+  }
+
+  // Centralized refresh method for pull-to-refresh and initial load
+  Future<void> _refreshData() async {
+    if (_pactId != null && _pactId!.isNotEmpty) {
+      final pactProvider = Provider.of<PactProvider>(context, listen: false);
+      try {
+        await pactProvider.fetchTodayCheckins(_pactId!); // Always fetch fresh data
+      } catch (e) {
+        if (mounted) {
+          AwesomeSnackbarHelper.showError(
+            context,
+            'Error',
+            'Failed to refresh data',
+          );
+        }
+      }
+    }
   }
 
   void _updateReminderCountdown() async {
@@ -207,7 +233,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
       
       // Refresh today's check-ins list after successful check-in
       try {
-        await provider.fetchTodayCheckins(pactId);
+        await provider.fetchTodayCheckins(pactId); // Refresh after check-in
       } catch (e) {
         // Log error but don't show it to user since check-in was successful
         print('Error refreshing check-ins: $e');
@@ -433,11 +459,13 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                         borderRadius: BorderRadius.circular(4.w),
                       ),
                       child: Text(
-                        status,
+                        status[0].toUpperCase() + status.substring(1), // Capitalize first letter
                         style: TextStyle(
-                          color: statusType == "active"
+                          color: statusType == "approved"
                               ? Color(0xFF2E8701)
-                              : Color(0xFFC84E4F),
+                              : statusType == "rejected"
+                                  ? Color(0xFFC84E4F)
+                              : Color(0xFFFFFFFF),
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                         ),
@@ -680,9 +708,11 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () async {
+                          onPressed: _acceptLoading ? null : () async {
+                            setState(() => _acceptLoading = true);
                             final provider = Provider.of<PactProvider>(context, listen: false);
                             final result = await provider.verifyCheckin(checkinId: checkinId, action: 'approve');
+                            setState(() => _acceptLoading = false);
                             Navigator.of(context).pop();
                             if (result['success'] == true) {
                               AwesomeSnackbarHelper.showSuccess(
@@ -711,16 +741,30 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text('ACCEPT', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
+                          child: _acceptLoading 
+                            ? Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                                  ),
+                                ),
+                              )
+                            : Text('ACCEPT', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 18)),
                         ),
                       ),
                       SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () async {
+                          onPressed: _declineLoading ? null : () async {
+                            setState(() => _declineLoading = true);
                             final provider = Provider.of<PactProvider>(context, listen: false);
                             final result = await provider.verifyCheckin(checkinId: checkinId, action: 'reject');
+                            setState(() => _declineLoading = false);
                             Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -747,15 +791,76 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text('DECLINE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)),
+                          child: _declineLoading 
+                            ? Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                                  ),
+                                ),
+                              )
+                            : Text('DECLINE', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 18)),
                         ),
                       ),
                       SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: _geminiLoading ? null : () async {
+                            setState(() => _geminiLoading = true);
+                            final provider = Provider.of<PactProvider>(context, listen: false);
+                            final result = await provider.autoVerifyCheckin(checkinId: checkinId);
+                            setState(() => _geminiLoading = false);
+                            
+                            if (result['success']) {
+                              Navigator.of(context).pop();
 
+                              final snackBar = SnackBar(
+                                elevation: 0,
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: 'Success!',
+                                  message: 'Check-in auto-verified successfully with Gemini AI',
+                                  contentType: ContentType.success,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            } else {
+                              // Handle specific Gemini API key error
+                              String errorMessage = result['error'] ?? 'Failed to auto-verify check-in';
+                              String title = 'Error!';
+                              Navigator.of(context).pop();
+                              if (errorMessage.contains('Gemini API key is not set') || 
+                                  errorMessage.contains('API key') ||
+                                  errorMessage.contains('not set')) {
+                                title = 'Configuration Error';
+                                errorMessage = 'Your Gemini API key is not set. Please set it in Settings to use auto-verify.';
+                              }
+                              
+                              final snackBar = SnackBar(
+                                elevation: 0,
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: Colors.transparent,
+                                content: AwesomeSnackbarContent(
+                                  title: title,
+                                  message: errorMessage,
+                                  contentType: ContentType.failure,
+                                ),
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+                            }
+                            
+                            // Refresh check-ins
+                            final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+                            final pactId = args != null && args['pactId'] != null ? args['pactId'] as String : '';
+                            if (pactId.isNotEmpty) {
+                              provider.fetchTodayCheckins(pactId);
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xFF2563FF),
@@ -763,7 +868,19 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text('Process with Gemini', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                          child: _geminiLoading 
+                            ? Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 3,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                ),
+                              )
+                            : Text('Process with Gemini', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                         ),
                       ),
                       SizedBox(height: 16),
@@ -837,10 +954,15 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
               Positioned.fill(
                 child: Image.asset('assets/images/Blur.png', fit: BoxFit.cover),
               ),
-              SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 5.w),
-                  child: Column(
+              RefreshIndicator(
+                onRefresh: _refreshData,
+                color: const Color(0xFF1D61E7),
+                backgroundColor: Colors.white,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 5.w),
+                    child: Column(
                     children: [
                       SizedBox(height: 12.h),
                       // Next Check-in Due widget with reminder countdown
@@ -884,17 +1006,17 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                               Color actionColor;
                               String actionText;
                               if (status == 'pending') {
-                                statusColor = Color(0xFF4AFFB3);
+                                statusColor = Color(0xFF6CA8FF);
                                 actionColor = Color(0xFF6CA8FF);
                                 actionText = verified ? 'Verified' : 'Pending';
-                              } else if (status == 'failed') {
+                              } else if (status == 'reject') {
                                 statusColor = Color(0xFFFFA2A3);
                                 actionColor = Color(0xFFF47272);
                                 actionText = 'Failed';
                               } else {
                                 statusColor = Color(0xFF4AFFB3);
-                                actionColor = Color(0xFF42D393);
-                                actionText = 'Active';
+                                actionColor = Color(0xFF2ECC89);
+                                actionText = 'Verified';
                               }
                               return _buildMemberTile(
                                 name: name,
@@ -925,7 +1047,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                   ),
                 ),
               ),
-            ],
+              )],
           ),
         );
       },
