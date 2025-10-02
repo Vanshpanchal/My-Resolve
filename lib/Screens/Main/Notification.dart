@@ -192,7 +192,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     ),
                   ),
                   onDismissed: (direction) {
-                    // Mark as read and show confirmation snackbar
+                    // Store notification for potential undo
+                    final dismissedNotification = notification;
+                    
+                    // Remove notification from list immediately
+                    provider.removeNotification(notification.id);
+                    
+                    // Mark as read on server
                     provider.markAsRead(notification.id);
                     
                     ScaffoldMessenger.of(context).showSnackBar(

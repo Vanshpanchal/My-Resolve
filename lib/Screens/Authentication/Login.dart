@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:myresolve/Screens/Authentication/Register.dart';
+import 'package:myresolve/Screens/Authentication/ForgotPasswordScreen.dart';
 import 'package:myresolve/Screens/Main/HomeScreen.dart';
 import 'package:myresolve/Screens/OnBoardingScreen/OnBoardScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
@@ -163,7 +164,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         alignment: Alignment.center,
                         child: TextButton(
                           onPressed: () {
-                            // Forgot Password logic here
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ForgotPasswordScreen(),
+                              ),
+                            );
                           },
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.zero,

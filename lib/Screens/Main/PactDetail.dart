@@ -82,7 +82,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
     super.dispose();
   }
   // Countdown card widget (copied from Dashboard/Profile for consistency)
-  Widget _countdownCard(String timeStr) {
+  Widget _countdownCard(String timeStr, String pactId) {
     return Container(
       padding: EdgeInsets.all(5.w),
       decoration: BoxDecoration(
@@ -119,31 +119,49 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 1.5.h),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(4.w),
-                    onTap: () {
-                      // TODO: Implement check-in logic
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6.w,
-                        vertical: 1.5.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6F98FF),
-                        border: Border.all(color: Colors.white, width: 1.8),
-                        borderRadius: BorderRadius.circular(4.w),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Check-In',
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: .5,
-                          ),
+                  SizedBox(height: 1.h),
+                  Flexible(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(3.w),
+                      onTap: _uploading ? null : () {
+                        if (pactId.isNotEmpty) {
+                          _submitCheckIn(context, pactId);
+                        } else {
+                          AwesomeSnackbarHelper.showError(context, 'Error', 'Pact ID missing.');
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 3.w,
+                          vertical: 1.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _uploading ? const Color(0xFF6F98FF).withOpacity(0.7) : const Color(0xFF6F98FF),
+                          border: Border.all(color: Colors.white, width: 1.5),
+                          borderRadius: BorderRadius.circular(3.w),
+                        ),
+                        child: Center(
+                          child: _uploading
+                              ? SizedBox(
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : FittedBox(
+                                  child: Text(
+                                    'Check-In',
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w900,
+                                      color: Colors.white,
+                                      letterSpacing: .5,
+                                    ),
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -204,6 +222,9 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
   }
 
   Future<void> _submitCheckIn(BuildContext context, String pactId) async {
+    // Remove focus from text field
+    FocusScope.of(context).unfocus();
+    
     if (_selectedImage == null) {
       AwesomeSnackbarHelper.showWarning(
         context,
@@ -355,7 +376,17 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
               ),
               child: Center(
                 child: _uploading
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 3,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      )
                     : Text(
                         'Check-In',
                         style: TextStyle(
@@ -969,7 +1000,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                       ValueListenableBuilder(
                         valueListenable: _reminderTimeStrNotifier,
                         builder: (context, String timeStr, _) {
-                          return _countdownCard(timeStr);
+                          return _countdownCard(timeStr, pactId);
                         },
                       ),
                       SizedBox(height: 2.0.h),

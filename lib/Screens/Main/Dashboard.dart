@@ -506,13 +506,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   SizedBox(height: 1.5.h),
                   InkWell(
-                    borderRadius: BorderRadius.circular(4.w),
+                    // borderRadius: BorderRadius.circular(4.w),
                     onTap: () {
                       // TODO: Implement check-in logic
                     },
                     child: Container(
                       padding: EdgeInsets.symmetric(
-                        horizontal: 6.w,
+                        horizontal: 2.w,
                         vertical: 1.5.h,
                       ),
                       decoration: BoxDecoration(
@@ -522,12 +522,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          'Check-In',
+                          'Daily Check-in',
                           style: TextStyle(
-                            fontSize: 16.sp,
+                            fontSize: 15.sp,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
-                            letterSpacing: .5,
+                            // letterSpacing: .,
                           ),
                         ),
                       ),
