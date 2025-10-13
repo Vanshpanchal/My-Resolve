@@ -7,6 +7,7 @@ import 'package:myresolve/Utils/pact_provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:myresolve/Utils/awesome_snackbar_helper.dart';
 import 'package:myresolve/Screens/Main/FullScreenImageViewer.dart';
+import 'package:myresolve/Screens/Main/InviteQrScreen.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -979,6 +980,29 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                 ],
               ],
             ),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  if (groupCode.isNotEmpty) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => InviteQrScreen(
+                          joinCode: groupCode,
+                          pactTitle: pactTitle,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                icon: Icon(
+                  Icons.share,
+                  color: Colors.black,
+                  size: 22.sp,
+                ),
+                tooltip: 'Invite members',
+              ),
+            ],
           ),
           body: Stack(
             children: [

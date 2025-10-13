@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:myresolve/Screens/Main/Dashboard.dart';
 import 'package:myresolve/Screens/Main/PactDetail.dart';
+import 'package:myresolve/Screens/Main/Profile.dart';
 import 'package:myresolve/Utils/FilterBar.dart';
 import 'package:myresolve/Utils/PactCardModel.dart';
 import 'package:myresolve/Utils/reminder_helper.dart';
@@ -392,37 +393,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: EdgeInsets.symmetric(horizontal: 5.w),
       child: Row(
         children: [
-          Container(
-            width: 13.w,
-            height: 13.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+          GestureDetector(
+            onTap: () {
+              // Navigate to Profile screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ProfileScreen(),
                 ),
-              ],
-            ),
-            child: CircleAvatar(
-              radius: 13.w / 2,
-              backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
-                  ? NetworkImage(profilePictureUrl) as ImageProvider
-                  : null,
-              backgroundColor: Colors.grey[300],
-              onBackgroundImageError: profilePictureUrl != null
-                  ? (exception, stackTrace) {
-                      print('Failed to load profile image: $profilePictureUrl');
-                    }
-                  : null,
-              child: profilePictureUrl == null || profilePictureUrl.isEmpty
-                  ? Icon(
-                      Icons.person,
-                      size: 6.w,
-                      color: Colors.grey[600],
-                    )
-                  : null,
+              );
+            },
+            child: Container(
+              width: 13.w,
+              height: 13.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 13.w / 2,
+                backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
+                    ? NetworkImage(profilePictureUrl) as ImageProvider
+                    : null,
+                backgroundColor: Colors.grey[300],
+                onBackgroundImageError: profilePictureUrl != null
+                    ? (exception, stackTrace) {
+                        print('Failed to load profile image: $profilePictureUrl');
+                      }
+                    : null,
+                child: profilePictureUrl == null || profilePictureUrl.isEmpty
+                    ? Icon(
+                        Icons.person,
+                        size: 6.w,
+                        color: Colors.grey[600],
+                      )
+                    : null,
+              ),
             ),
           ),
           SizedBox(width: 4.w),

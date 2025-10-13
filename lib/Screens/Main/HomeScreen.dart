@@ -7,6 +7,7 @@ import 'package:myresolve/Screens/Main/Dashboard.dart';
 import 'package:myresolve/Screens/Main/Profile.dart';
 import 'package:myresolve/Screens/Main/Notification.dart';
 import 'package:myresolve/Screens/Main/Feed.dart';
+import 'package:myresolve/Screens/Main/ScanInviteScreen.dart';
 import 'package:myresolve/Utils/Colors.dart';
 import 'package:myresolve/Utils/notification_provider.dart';
 import 'package:provider/provider.dart';
@@ -103,6 +104,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
               },
               children: screens,
+            ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ScanInviteScreen(),
+                  ),
+                );
+              },
+              backgroundColor: const Color(0xFF1D61E7),
+              child: const Icon(
+                Icons.qr_code_scanner,
+                color: Colors.white,
+                size: 28,
+              ),
+              tooltip: 'Scan Invite QR',
             ),
             bottomNavigationBar: Stack(
             children: [
