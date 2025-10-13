@@ -10,6 +10,7 @@ import 'package:myresolve/Utils/awesome_snackbar_helper.dart';
 import 'package:myresolve/Screens/Authentication/SetNewPasswordScreen.dart';
 import 'package:myresolve/Screens/Authentication/Login.dart';
 import 'package:myresolve/Utils/pact_provider.dart';
+import 'package:myresolve/Screens/Main/GeminiApiKeyGuide.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -363,6 +364,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 builder: (context) => GeminiApiKeyDialog(),
                               );
                             },
+                            onInfoTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const GeminiApiKeyGuide(),
+                                ),
+                              );
+                            },
                           ),
                           SizedBox(height: 2.h),
                           _SettingsButton(
@@ -650,12 +659,14 @@ class _SettingsButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   final bool loading;
+  final VoidCallback? onInfoTap;
 
   const _SettingsButton({
     required this.icon,
     required this.label,
     required this.onTap,
     this.loading = false,
+    this.onInfoTap,
   });
 
   @override
@@ -703,6 +714,19 @@ class _SettingsButton extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onInfoTap != null) ...[
+                IconButton(
+                  onPressed: onInfoTap,
+                  icon: Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 2.8.h,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                SizedBox(width: 2.w),
+              ],
               loading
                   ? SizedBox(
                       width: 3.2.h,
