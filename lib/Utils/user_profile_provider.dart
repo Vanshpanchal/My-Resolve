@@ -50,6 +50,7 @@ class UserProfileProvider with ChangeNotifier {
     } catch (e) {
       error = e.toString();
     } finally {
+      print(error);
       loading = false;
       notifyListeners();
     }

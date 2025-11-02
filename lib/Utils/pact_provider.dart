@@ -208,7 +208,7 @@ class PactProvider with ChangeNotifier {
         _pactData = data;
         _lastFetchTime = DateTime.now(); // Update cache timestamp
         _error = null; // Clear error on success
-        print(_pactData?.pacts[1].daysDone);
+        // print(_pactData?.pacts[1].daysDone);
       } else {
         print(response.body);
         _error = 'Failed to fetch pacts';
@@ -279,6 +279,7 @@ class PactProvider with ChangeNotifier {
       return {'success': false, 'error': _error};
     } finally {
       _loading = false;
+      print(_error);
       notifyListeners();
     }
   }
@@ -321,6 +322,7 @@ class PactProvider with ChangeNotifier {
       return {'success': false, 'error': _error};
     } finally {
       _loading = false;
+      print(_error);
       notifyListeners();
     }
   }

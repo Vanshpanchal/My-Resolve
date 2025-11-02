@@ -227,7 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               SafeArea(
                 child: error != null
-                    ? Center(child: Text(error))
+                    ? Center(child: Text(error + " Please pull down to refresh."))
                     : RefreshIndicator(
                         onRefresh: _refreshData,
                         color: const Color(0xFF1D61E7),
@@ -422,8 +422,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ? NetworkImage(profilePictureUrl) as ImageProvider
                     : null,
                 backgroundColor: Colors.grey[300],
-                onBackgroundImageError: profilePictureUrl != null
+                // Only provide an onBackgroundImageError callback when a valid image URL
+                onBackgroundImageError: (profilePictureUrl != null && profilePictureUrl.isNotEmpty)
                     ? (exception, stackTrace) {
+                        // Log the failure for debugging, but avoid leaving a non-null
+                        // onBackgroundImageError when backgroundImage is null (assertion)
+                        // This prevents the CircleAvatar assertion to trigger.
+                        // You can replace this with more robust error handling if needed.
+                        // ignore: avoid_print
                         print('Failed to load profile image: $profilePictureUrl');
                       }
                     : null,
@@ -509,14 +515,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Text(
                       timeStr,
                       style: TextStyle(
-                        fontSize: 26.sp,
+                        fontSize: 24.sp,
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
                         letterSpacing: 2,
                       ),
                     ),
                   ),
-                  SizedBox(height: 1.5.h),
+                  SizedBox(height: 0.5.h),
                   InkWell(
                     // borderRadius: BorderRadius.circular(4.w),
                     onTap: () {
