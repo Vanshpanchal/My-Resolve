@@ -57,12 +57,39 @@ class FirebaseNotificationService {
 
       developer.log('Notification permission status: ${settings.authorizationStatus}', name: 'FirebaseService');
 
-      // Get FCM token
-      _token = await _messaging.getToken();
-      if (_token != null) {
-        developer.log('FCM Token obtained: ${_token!.substring(0, 20)}...', name: 'FirebaseService');
-      } else {
-        developer.log('Failed to obtain FCM token', name: 'FirebaseService');
+      // Get FCM token with retries. Sometimes Firebase services take a moment
+      // to become available (emulators without Play Services or bad config
+      // can cause MISSING_INSTANCE errors). We'll attempt a few times and
+      // continue gracefully if token cannot be obtained.
+      const int maxAttempts = 3;
+      int attempt = 0;
+      while (attempt < maxAttempts) {
+        attempt++;
+        try {
+          _token = await _messaging.getToken();
+          if (_token != null && _token!.isNotEmpty) {
+            developer.log('FCM Token obtained: ${_token!.substring(0, 20)}...', name: 'FirebaseService');
+            break;
+          } else {
+            developer.log('Attempt $attempt: FCM token is null/empty', name: 'FirebaseService');
+          }
+        } catch (e, st) {
+          // Log detailed error for diagnosis. If it's the known MISSING_INSTANCE
+          // error, provide actionable guidance in the log message.
+          final msg = e.toString();
+          developer.log('Attempt $attempt: Error getting FCM token: $msg', name: 'FirebaseService', error: e, stackTrace: st);
+          if (msg.contains('MISSING_INSTANCE') || msg.contains('MISSING_INSTANCEID') || msg.contains('MISSING_INSTANCE_ID')) {
+            developer.log('MISSING_INSTANCE error detected — check google-services.json, applicationId, and device Play Services', name: 'FirebaseService');
+          }
+        }
+
+        // Short backoff before retrying
+        if (attempt < maxAttempts) {
+          await Future.delayed(const Duration(seconds: 2 * 1));
+        }
+      }
+      if (_token == null) {
+        developer.log('Failed to obtain FCM token after $maxAttempts attempts — continuing without token', name: 'FirebaseService');
       }
 
       // Set up message handlers

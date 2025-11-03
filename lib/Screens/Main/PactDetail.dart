@@ -105,7 +105,7 @@ class _PactDetailScreenState extends State<PactDetailScreen> {
                       fontSize: 16.sp,
                       color: Colors.white.withOpacity(.85),
                       fontWeight: FontWeight.w500,
-                      letterSpacing: .3,
+                      letterSpacing: .2,
                     ),
                   ),
                   SizedBox(height: 1.5.h),
