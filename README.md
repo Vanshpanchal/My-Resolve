@@ -35,10 +35,10 @@
 
 ## 📸 Previews
 
-![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(1).png)
 ![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(2).png)
-![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(3).png)
-![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(4).png)
+![Preview-2](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(3).png)
+![Preview-3](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(4).png)
+![Preview-4](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(1).png)
 
 ---
 
@@ -220,13 +220,6 @@ android/, ios/, web/, windows/, linux/, macos/
 - **firebase_messaging**: Cloud messaging backend
 - **flutter_local_notifications**: Local notification display and handling
 - **timezone**: Scheduled notifications support
-
----
-
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
