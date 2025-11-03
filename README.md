@@ -33,6 +33,15 @@
 
 ---
 
+## 📸 Previews
+
+![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(1).png)
+![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(2).png)
+![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(3).png)
+![Preview-1](https://github.com/Vanshpanchal/My-Resolve/blob/cc81e7188944f4d40c9dd28f09c882b8209bb08b/previews/preview%20(4).png)
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -181,126 +190,6 @@ android/, ios/, web/, windows/, linux/, macos/
 
 ---
 
-## 📸 Previews
-
-### App Screenshots
-
-|               Profile & Settings                |                     Onboarding                     |                 Create & Join Pact                  |               Pacts & Notifications                |
-| :---------------------------------------------: | :------------------------------------------------: | :-------------------------------------------------: | :------------------------------------------------: |
-| ![Profile Preview](assets/readme/preview_1.png) | ![Onboarding Preview](assets/readme/preview_2.png) | ![Create/Join Preview](assets/readme/preview_3.png) | ![Pacts & QR Preview](assets/readme/preview_4.png) |
-
-**Screenshot Guidelines:**
-
-- Resolution: 1080×1920 (portrait) or 1280×720 (landscape)
-- Format: PNG (transparent background optional)
-- Size: ~500KB max per image
-
-### Demo GIF
-
-Showcase the QR invite flow or key interaction in a short demo GIF.
-
-![App Demo](assets/readme/demo.gif)
-
-**GIF Guidelines:**
-
-- Duration: 5–8 seconds
-- Resolution: 800×600 or smaller
-- Format: GIF or MP4 (GitHub supports both)
-- Size: ~5–10MB max
-- Content: Show one key flow (e.g., create pact → share QR → join from another device)
-
-**How to create a GIF:**
-
-1. Record screen using OBS, QuickTime, or Android/iOS native recorder
-2. Convert to GIF using `ffmpeg`:
-      ```bash
-      ffmpeg -i video.mp4 -vf "fps=10,scale=800:-1" output.gif
-      ```
-3. Place in `assets/readme/` and add to this README
-
----
-
-## 🛠️ Development
-
-### Adding a New Feature
-
-1. Create a new screen in `lib/Screens/Main/YourFeature.dart`
-2. Add state management logic to `lib/Utils/your_provider.dart` (if needed)
-3. Update `HomeScreen.dart` to add your screen to the PageView and bottom navigation
-4. Test on multiple devices and screen sizes
-
-### Code Style
-
-- Follow Dart conventions (dart fmt, Effective Dart)
-- Use meaningful variable and function names
-- Add comments for non-obvious logic
-- Keep widgets focused and reusable
-
-### Building for Production
-
-**Android**
-
-```powershell
-flutter build apk --release
-# or use App Bundle for Play Store
-flutter build appbundle --release
-```
-
-**iOS**
-
-```bash
-flutter build ipa --release
-```
-
-**Web**
-
-```powershell
-flutter build web --release
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Firebase Notifications Error: `MISSING_INSTANCE...`
-
-**Cause**: Firebase native services unavailable or misconfigured.
-
-**Solutions** (in order):
-
-1. Ensure `google-services.json` is in `android/app/` and has correct `package_name`
-2. Verify `android/app/build.gradle.kts` has `id("com.google.gms.google-services")`
-3. Confirm device/emulator has Google Play Services installed
-      - Use a **Google Play emulator image** (not generic image)
-4. Clean and rebuild:
-      ```powershell
-      flutter clean
-      flutter pub get
-      flutter build apk
-      ```
-5. Test on a physical Android device (often more reliable than emulator)
-
-### QR Scanner Not Opening
-
-- Check camera permissions in `AndroidManifest.xml` or iOS `Info.plist`
-- Ensure camera is available on the device
-- On iOS, verify app has camera permission in Settings → Privacy → Camera
-
-### App Crashes on Startup
-
-- Check Flutter logs: `flutter run` and read console output
-- Verify Firebase initialization: check `lib/firebase_options.dart`
-- Ensure all required permissions are granted
-
-### Can't Join a Pact
-
-- Verify backend API is running at `ApiEndpoints.baseUrl`
-- Check join code format (should be alphanumeric)
-- Ensure you're connected to the internet
-- Check app logs for API error messages
-
----
-
 ## 📚 Architecture & Tech Stack
 
 ### State Management
@@ -334,18 +223,6 @@ flutter build web --release
 
 ---
 
-## 🚧 Future Enhancements
-
-- [ ] Pact roles (owner/admin/member) with moderation
-- [ ] Time-limited or one-time invite tokens
-- [ ] Deep linking (open app directly from invite URL)
-- [ ] Analytics dashboard for pact creators
-- [ ] Leaderboards and badges system
-- [ ] Offline mode with sync on reconnection
-- [ ] Multi-language support (i18n)
-- [ ] Dark mode toggle
-
----
 
 ## 📄 License
 
@@ -363,25 +240,3 @@ Contributions are welcome! Please follow these steps:
 4. Push to the branch: `git push origin feature/YourFeature`
 5. Open a Pull Request
 
-Please ensure your code follows the project's style guidelines and passes all tests.
-
----
-
-## 📞 Support & Contact
-
-- **Issues**: Open a GitHub issue for bugs or feature requests
-- **Author**: [Vanshpanchal](https://github.com/Vanshpanchal)
-- **Email**: Reach out via GitHub profile
-
----
-
-## 🎉 Acknowledgments
-
-- [Flutter](https://flutter.dev) — cross-platform framework
-- [Firebase](https://firebase.google.com) — backend services
-- [Provider](https://pub.dev/packages/provider) — state management
-- All contributors and community members
-
----
-
-**Happy building! 🚀 Join a pact, stay accountable, achieve more together.**
