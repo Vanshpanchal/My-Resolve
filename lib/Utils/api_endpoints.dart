@@ -1,7 +1,5 @@
 class ApiEndpoints {
-  // static const String baseUrl = 'https://myresolve-e2gdhkfqcxhzgffv.canadacentral-01.azurewebsites.net';
-  // static const String baseUrl = 'https://flutterappmyresolve-bxf6esh6a5azgqcc.eastasia-01.azurewebsites.net';
-  static const String baseUrl = 'https://pact-backend-latest.onrender.com';
+  static const String baseUrl = 'baseURL';
 
   // Auth
   static const String login = '/api/auth/login';
