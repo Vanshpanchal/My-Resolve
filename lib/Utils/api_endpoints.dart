@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = 'baseURL';
+  static const String baseUrl = 'https://pact-backend-latest.onrender.com';
 
   // Auth
   static const String login = '/api/auth/login';

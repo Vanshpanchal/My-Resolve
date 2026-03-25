@@ -43,3 +43,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# User secrets and configuration
+google-services (1).json
+google-services.json
+firebase_options.dart
+local.properties
+pubspec.lock
